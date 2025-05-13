@@ -1,0 +1,19 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block content_title %}
+    <h1>Управление книгами</h1>
+{% endblock %}
+
+{% block result_list %}
+    <!-- Общая статистика -->
+    <div class="module" style="margin-bottom: 20px;">
+        <h2>Общая статистика</h2>
+        <div style="margin: 10px;">
+            <p><strong>Всего книг в библиотеке:</strong> {{ total_books }}</p>
+        </div>
+    </div>
+
+    <!-- Стандартный список -->
+    {{ block.super }}
+{% endblock %} 

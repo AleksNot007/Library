@@ -1,0 +1,192 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Статистика сайта | Административная панель{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>Статистика сайта</h1>
+    
+    <!-- Статистика пользователей -->
+    <div class="module">
+        <h2>Пользователи</h2>
+        <div class="stats-section">
+            <table>
+                <tr>
+                    <th>Всего пользователей:</th>
+                    <td>{{ total_users }}</td>
+                </tr>
+                <tr>
+                    <th>Активные пользователи:</th>
+                    <td>{{ active_users }}</td>
+                </tr>
+                <tr>
+                    <th>Персонал сайта:</th>
+                    <td>{{ staff_users }}</td>
+                </tr>
+                <tr>
+                    <th>Администраторы:</th>
+                    <td>{{ superusers }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Статистика контента -->
+    <div class="module">
+        <h2>Контент</h2>
+        <div class="stats-section">
+            <table>
+                <tr>
+                    <th>Всего книг:</th>
+                    <td>{{ total_books }}</td>
+                </tr>
+                <tr>
+                    <th>Всего авторов:</th>
+                    <td>{{ total_authors }}</td>
+                </tr>
+                <tr>
+                    <th>Всего отзывов:</th>
+                    <td>{{ total_reviews }}</td>
+                </tr>
+                <tr>
+                    <th>Всего цитат:</th>
+                    <td>{{ total_quotes }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Статистика активности -->
+    <div class="module">
+        <h2>Активность пользователей</h2>
+        <div class="stats-section">
+            <table>
+                <tr>
+                    <th>Пользователей с книгами:</th>
+                    <td>{{ users_with_books }}</td>
+                </tr>
+                <tr>
+                    <th>Пользователей с отзывами:</th>
+                    <td>{{ users_with_reviews }}</td>
+                </tr>
+                <tr>
+                    <th>Пользователей с цитатами:</th>
+                    <td>{{ users_with_quotes }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Средние показатели -->
+    <div class="module">
+        <h2>Средние показатели</h2>
+        <div class="stats-section">
+            <table>
+                <tr>
+                    <th>Среднее количество книг на пользователя:</th>
+                    <td>{{ avg_books_per_user|floatformat:1 }}</td>
+                </tr>
+                <tr>
+                    <th>Среднее количество отзывов на пользователя:</th>
+                    <td>{{ avg_reviews_per_user|floatformat:1 }}</td>
+                </tr>
+                <tr>
+                    <th>Среднее количество цитат на пользователя:</th>
+                    <td>{{ avg_quotes_per_user|floatformat:1 }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Статистика по спискам -->
+    <div class="module">
+        <h2>Списки книг</h2>
+        <div class="stats-section">
+            <table>
+                {% for list in reading_lists %}
+                <tr>
+                    <th>{{ list.list_type }}:</th>
+                    <td>{{ list.count }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+
+    <!-- Топ книг -->
+    <div class="module">
+        <h2>Топ-5 книг по отзывам</h2>
+        <div class="stats-section">
+            <table>
+                {% for book in top_reviewed_books %}
+                <tr>
+                    <th>{{ book.title }}</th>
+                    <td>{{ book.reviews_count }} отзывов</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+
+    <div class="module">
+        <h2>Топ-5 цитируемых книг</h2>
+        <div class="stats-section">
+            <table>
+                {% for book in top_quoted_books %}
+                <tr>
+                    <th>{{ book.title }}</th>
+                    <td>{{ book.quotes_count }} цитат</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Стили для страницы статистики -->
+<style>
+    .module {
+        margin-bottom: 20px;
+        padding: 10px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .module h2 {
+        background: #79aec8;
+        color: #fff;
+        padding: 8px;
+        margin: -10px -10px 10px -10px;
+        border-radius: 4px 4px 0 0;
+    }
+    
+    .stats-section {
+        padding: 10px;
+    }
+    
+    .stats-section table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .stats-section th,
+    .stats-section td {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+        text-align: left;
+    }
+    
+    .stats-section th {
+        width: 70%;
+        color: #666;
+    }
+    
+    .stats-section td {
+        width: 30%;
+        font-weight: bold;
+        color: #417690;
+    }
+</style>
+{% endblock %} 

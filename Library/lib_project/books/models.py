@@ -112,3 +112,43 @@ class UserBookRelation(models.Model):
     def __str__(self):
         # Метод возвращает строковое представление: имя пользователя, название книги и название списка (через get_list_type_display)
         return f"{self.user.username}: {self.book.title} ({self.get_list_type_display()})"
+
+# ----------------------------
+# Модель цитаты
+# ----------------------------
+class Quote(models.Model):
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="quotes", verbose_name="Книга")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="quotes", verbose_name="Пользователь")
+    text = models.TextField(verbose_name="Текст цитаты")
+    page = models.PositiveIntegerField(blank=True, null=True, verbose_name="Номер страницы")
+    chapter = models.CharField(max_length=255, blank=True, null=True, verbose_name="Глава/Раздел")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата добавления")
+    is_public = models.BooleanField(default=True, verbose_name="Публичная цитата")
+    likes = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="liked_quotes",
+        blank=True,
+        verbose_name="Лайки"
+    )
+
+    class Meta:
+        verbose_name = "Цитата"
+        verbose_name_plural = "Цитаты"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.book.title} - {self.text[:50]}..."
+
+    @property
+    def likes_count(self):
+        """
+        Возвращает количество лайков цитаты
+        """
+        return self.likes.count()
+
+    @property
+    def short_text(self):
+        """
+        Возвращает сокращенный текст цитаты для отображения в списках
+        """
+        return f"{self.text[:100]}..." if len(self.text) > 100 else self.text
