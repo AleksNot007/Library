@@ -32,7 +32,6 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'books.apps.BooksConfig',  # Размещаем наше приложение первым
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,8 +40,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Ваши приложения
-    'users',
-    'recommendations',  
+    'main_admin.apps.MainAdminConfig',
+    'users.apps.UsersConfig',
+    'books.apps.BooksConfig',
+    'recommendations.apps.RecommendationsConfig',
 
     # Сторонние приложения
     'rest_framework',
@@ -60,13 +61,16 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'lib_project.urls'
+ROOT_URLCONF = 'main_admin.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
+            os.path.join(BASE_DIR, 'main_admin/templates'),
             os.path.join(BASE_DIR, 'books/templates'),
+            os.path.join(BASE_DIR, 'users/templates'),
+            os.path.join(BASE_DIR, 'recommendations/templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -80,7 +84,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'lib_project.wsgi.application'
+WSGI_APPLICATION = 'main_admin.wsgi.application'
 
 
 # Database
