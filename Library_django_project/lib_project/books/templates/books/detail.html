@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ book.title }} - Подробная информация{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4">
+            {% if book.cover %}
+                <img src="{{ book.cover.url }}" class="img-fluid rounded" alt="{{ book.title }}">
+            {% else %}
+                <div class="bg-light text-center p-5 rounded">
+                    <i class="fas fa-book fa-4x text-secondary"></i>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-md-8">
+            <h1>{{ book.title }}</h1>
+            
+            <div class="authors mb-3">
+                <h5>Авторы:</h5>
+                {% for author in book.authors.all %}
+                    <span class="badge bg-secondary">{{ author.name }}</span>
+                {% endfor %}
+            </div>
+
+            {% if book.published_date %}
+            <p><strong>Дата публикации:</strong> {{ book.published_date|date:"d.m.Y" }}</p>
+            {% endif %}
+
+            {% if book.genre %}
+            <p><strong>Жанр:</strong> {{ book.get_genre_display }}</p>
+            {% endif %}
+
+            {% if book.world_rating %}
+            <p><strong>Мировой рейтинг:</strong> {{ book.world_rating }}</p>
+            {% endif %}
+
+            <div class="description mt-4">
+                <h5>Описание:</h5>
+                <p>{{ book.description|default:"Описание отсутствует"|linebreaks }}</p>
+            </div>
+
+            {% if book.submitted_by %}
+            <p class="text-muted mt-3">
+                <small>Добавил: {{ book.submitted_by.username }}</small>
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if user.is_authenticated %}
+    <div class="row mt-4">
+        <div class="col">
+            <h3>Действия</h3>
+            <div class="btn-group">
+                <a href="#" class="btn btn-outline-primary">Добавить в избранное</a>
+                <a href="#" class="btn btn-outline-success">Читаю сейчас</a>
+                <a href="#" class="btn btn-outline-info">Буду читать</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

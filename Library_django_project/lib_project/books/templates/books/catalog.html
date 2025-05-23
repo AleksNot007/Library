@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Каталог книг — Личная библиотека{% endblock %}
+
+{% block content %}
+<main class="container mt-4">
+    <div class="row">
+        <!-- Фильтры -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Фильтры</h5>
+                    <form method="get" action="{% url 'books:catalog' %}">
+                        <div class="mb-3">
+                            <label class="form-label">Жанр</label>
+                            <select name="genre" class="form-select">
+                                <option value="">Все жанры</option>
+                                {% for genre_code, genre_name in GENRE_CHOICES %}
+                                <option value="{{ genre_code }}" {% if selected_genre == genre_code %}selected{% endif %}>
+                                    {{ genre_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Сортировка</label>
+                            <select name="ordering" class="form-select">
+                                <option value="title" {% if selected_ordering == 'title' %}selected{% endif %}>По названию</option>
+                                <option value="-published_date" {% if selected_ordering == '-published_date' %}selected{% endif %}>Сначала новые</option>
+                                <option value="published_date" {% if selected_ordering == 'published_date' %}selected{% endif %}>Сначала старые</option>
+                                <option value="rating" {% if selected_ordering == 'rating' %}selected{% endif %}>По рейтингу</option>
+                                <option value="popularity" {% if selected_ordering == 'popularity' %}selected{% endif %}>По популярности</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Применить</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Список книг -->
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Каталог книг</h1>
+                {% if user.is_authenticated %}
+                <a href="{% url 'books:openlibrary_search' %}" class="btn btn-success">
+                    Добавить книгу из OpenLibrary
+                </a>
+                {% endif %}
+            </div>
+            
+            {% if books %}
+            <div class="books-grid">
+                {% for book in books %}
+                <div class="book-card">
+                    {% if book.cover %}
+                        <img src="{{ book.cover.url }}" alt="{{ book.title }}" class="book-cover">
+                    {% else %}
+                        <div class="book-cover"></div>
+                    {% endif %}
+                    <div class="book-title">{{ book.title }}</div>
+                    <div class="book-author">
+                        {% for author in book.authors.all %}
+                            {{ author.name }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% if book.genre %}
+                    <div class="book-genre">{{ book.get_genre_display }}</div>
+                    {% endif %}
+                    <div class="book-actions">
+                        <a href="{% url 'books:detail' book.id %}" class="btn btn-primary btn-sm">Подробнее</a>
+                        {% if user.is_authenticated %}
+                        <div class="dropdown mt-2">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Добавить в список
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Читаю сейчас</a></li>
+                                <li><a class="dropdown-item" href="#">Хочу прочитать</a></li>
+                                <li><a class="dropdown-item" href="#">Прочитано</a></li>
+                                <li><a class="dropdown-item" href="#">Избранное</a></li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Пагинация -->
+            {% if books.paginator.num_pages > 1 %}
+            <nav aria-label="Навигация по страницам" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if books.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ books.previous_page_number }}{% if selected_genre %}&genre={{ selected_genre }}{% endif %}{% if selected_ordering %}&ordering={{ selected_ordering }}{% endif %}">
+                            Предыдущая
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in books.paginator.page_range %}
+                        {% if books.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > books.number|add:'-3' and num < books.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if selected_genre %}&genre={{ selected_genre }}{% endif %}{% if selected_ordering %}&ordering={{ selected_ordering }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if books.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ books.next_page_number }}{% if selected_genre %}&genre={{ selected_genre }}{% endif %}{% if selected_ordering %}&ordering={{ selected_ordering }}{% endif %}">
+                            Следующая
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <div class="alert alert-info">
+                {% if selected_genre %}
+                    <p>В этой категории пока нет книг.</p>
+                {% else %}
+                    <p>В каталоге пока нет книг.</p>
+                {% endif %}
+                {% if user.is_authenticated %}
+                    <a href="{% url 'books:openlibrary_search' %}" class="btn btn-primary">Добавить первую книгу</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</main>
+
+{% block extra_js %}
+<script>
+    // Инициализация выпадающих меню Bootstrap
+    document.addEventListener('DOMContentLoaded', function() {
+        var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'))
+        var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+            return new bootstrap.Dropdown(dropdownToggleEl)
+        })
+    })
+</script>
+{% endblock %}
+{% endblock %} 

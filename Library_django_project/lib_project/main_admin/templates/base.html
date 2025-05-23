@@ -1,4 +1,37 @@
 <!DOCTYPE html>
-<html>
+{% load static %}
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Моя Библиотека{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <header>
+    <div class="logo">Моя Библиотека</div>
+    <nav>
+      <ul>
+        <li><a href="{% url 'books:home' %}">Главная</a></li>
+        <li><a href="{% url 'books:catalog' %}">Каталог</a></li>
+        <li><a href="{% url 'books:collections' %}">Подборки</a></li>
+        {% if user.is_authenticated %}
+        <li><a href="{% url 'books:user_library' %}">Моя библиотека</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+    <form action="{% url 'books:search' %}" method="get" class="search-bar">
+      <input type="text" name="q" placeholder="Поиск книг">
+      <button type="submit">Найти</button>
+    </form>
+  </header>
 
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <p>© {% now "Y" %} Моя Библиотека. Все права защищены.</p>
+  </footer>
+</body>
 </html>

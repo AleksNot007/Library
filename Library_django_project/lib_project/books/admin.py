@@ -3,7 +3,7 @@ from django.urls import path
 from django.db.models import Count
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from .models import Book, Author, Review, UserBookRelation, Quote
+from .models import Book, Author, Review, UserBookRelation, Quote, GlobalCollection
 from . import views
 
 class LibraryAdminSite(admin.AdminSite):
@@ -45,7 +45,11 @@ admin_site = LibraryAdminSite(name='library_admin')
 class BookAdmin(admin.ModelAdmin):
     list_display = ('title', 'display_authors', 'genre', 'total_users_added')
     search_fields = ('title', 'authors__name', 'genre')
-    
+    list_filter = ('genre',)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request)
+
     def display_authors(self, obj):
         return ", ".join(author.name for author in obj.authors.all())
     display_authors.short_description = 'Авторы'
@@ -112,6 +116,13 @@ class UserAdmin(admin.ModelAdmin):
     search_fields = ('username', 'first_name', 'last_name', 'email')
     ordering = ('username',)
 
+class GlobalCollectionAdmin(admin.ModelAdmin):
+    list_display = ('title', 'is_active', 'created_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('title',)
+    list_editable = ('is_active',)
+    list_per_page = 10
+
 # Регистрируем все модели в кастомном админ-сайте
 admin_site.register(Book, BookAdmin)
 admin_site.register(Author, AuthorAdmin)
@@ -119,3 +130,5 @@ admin_site.register(Review, ReviewAdmin)
 admin_site.register(UserBookRelation, UserBookRelationAdmin)
 admin_site.register(Quote, QuoteAdmin)
 admin_site.register(get_user_model(), UserAdmin)
+admin_site.register(GlobalCollection, GlobalCollectionAdmin)
+                                           

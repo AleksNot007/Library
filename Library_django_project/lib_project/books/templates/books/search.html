@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+
+{% block title %}Поиск книг{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --bg-color: #f9f7f5;
+        --accent-color: #4c2a2a;
+        --text-color: #1c1c1c;
+        --border-color: #ddd;
+        --font-serif: "Georgia", serif;
+        --border-radius: 8px;
+    }
+
+    body {
+        font-family: var(--font-serif);
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    main {
+        max-width: 1200px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 20px;
+        flex: 1;
+    }
+
+    .hero {
+        background-color: #fff;
+        border-radius: var(--border-radius);
+        padding: 40px;
+        text-align: center;
+        margin-bottom: 24px;
+        position: relative;
+        background-image: url('https://via.placeholder.com/1200x300?text=Search+Banner');
+        background-size: cover;
+        background-position: center;
+        color: #fff;
+    }
+
+    .hero::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(76, 42, 42, 0.5);
+        border-radius: var(--border-radius);
+        z-index: 0;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .hero h1 {
+        font-size: 32px;
+        margin-bottom: 16px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .hero p {
+        font-size: 16px;
+        margin-bottom: 24px;
+    }
+
+    .hero input[type="text"] {
+        padding: 8px;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        width: 240px;
+        margin-right: 8px;
+        font-size: 14px;
+    }
+
+    .hero button {
+        padding: 8px 16px;
+        border-radius: var(--border-radius);
+        border: none;
+        background-color: var(--accent-color);
+        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .hero button:hover {
+        background-color: #5c3636;
+    }
+
+    .search-results {
+        margin-bottom: 24px;
+    }
+
+    .search-results h2 {
+        font-size: 20px;
+        color: var(--accent-color);
+        margin-bottom: 16px;
+    }
+
+    .books-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 20px;
+    }
+
+    .book-card {
+        background-color: #fff;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        padding: 16px;
+        text-align: center;
+        transition: box-shadow 0.2s;
+    }
+
+    .book-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .book-cover {
+        width: 100%;
+        height: 200px;
+        background-color: #eee;
+        border-radius: var(--border-radius);
+        margin-bottom: 12px;
+        object-fit: cover;
+    }
+
+    .book-title {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 4px;
+        color: var(--accent-color);
+    }
+
+    .book-author {
+        font-size: 13px;
+        margin-bottom: 8px;
+        color: #444;
+    }
+
+    .book-actions button {
+        padding: 6px 12px;
+        border: none;
+        border-radius: var(--border-radius);
+        background-color: var(--accent-color);
+        color: #fff;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .book-actions button:hover {
+        background-color: #5c3636;
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 40px;
+        background: #fff;
+        border-radius: var(--border-radius);
+        margin-bottom: 24px;
+    }
+
+    .no-results p {
+        font-size: 16px;
+        color: var(--text-color);
+        margin-bottom: 20px;
+    }
+
+    .openlibrary-search {
+        margin-top: 20px;
+    }
+
+    .openlibrary-search button {
+        padding: 10px 20px;
+        font-size: 14px;
+        background-color: var(--accent-color);
+        color: #fff;
+        border: none;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .openlibrary-search button:hover {
+        background-color: #5c3636;
+    }
+
+    @media (max-width: 768px) {
+        .hero h1 {
+            font-size: 24px;
+        }
+        .search-results h2 {
+            font-size: 18px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main>
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Поиск книг</h1>
+            <p>Найдите нужную книгу по названию, автору или жанру</p>
+            <form method="GET" action="{% url 'books:search' %}">
+                <input type="text" name="q" placeholder="Введите название книги" value="{{ query }}" />
+                <button type="submit">Найти</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="search-results">
+        {% if query %}
+            {% if books %}
+                <h2>Результаты поиска</h2>
+                <div class="books-grid">
+                    {% for book in books %}
+                    <div class="book-card">
+                        {% if book.cover %}
+                            <img src="{{ book.cover.url }}" alt="{{ book.title }}" class="book-cover">
+                        {% else %}
+                            <div class="book-cover"></div>
+                        {% endif %}
+                        <div class="book-title">{{ book.title }}</div>
+                        <div class="book-author">
+                            {% for author in book.authors.all %}
+                                {{ author.name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="book-actions">
+                            <a href="{% url 'books:detail' book.id %}">
+                                <button>Читать</button>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-results">
+                    <p>По вашему запросу в нашей библиотеке ничего не найдено.</p>
+                    <div class="openlibrary-search">
+                        <form method="GET" action="{% url 'books:openlibrary_search' %}">
+                            <input type="hidden" name="title" value="{{ query }}" />
+                            <button type="submit">Поискать в Open Library</button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        {% else %}
+            <h2>Последние добавленные книги</h2>
+            <div class="books-grid">
+                {% for book in books %}
+                <div class="book-card">
+                    {% if book.cover %}
+                        <img src="{{ book.cover.url }}" alt="{{ book.title }}" class="book-cover">
+                    {% else %}
+                        <div class="book-cover"></div>
+                    {% endif %}
+                    <div class="book-title">{{ book.title }}</div>
+                    <div class="book-author">
+                        {% for author in book.authors.all %}
+                            {{ author.name }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="book-actions">
+                        <a href="{% url 'books:detail' book.id %}">
+                            <button>Читать</button>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+</main>
+{% endblock %} 

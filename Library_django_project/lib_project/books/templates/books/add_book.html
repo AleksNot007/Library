@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Добавить книгу{% endblock %}
+
+{% block extra_css %}
+<style>
+    .add-book-form {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 30px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: var(--accent-color);
+    }
+
+    .form-group input[type="text"],
+    .form-group textarea,
+    .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .form-group textarea {
+        min-height: 150px;
+        resize: vertical;
+    }
+
+    .form-actions {
+        margin-top: 30px;
+        text-align: center;
+    }
+
+    .btn-submit {
+        padding: 12px 24px;
+        background-color: var(--accent-color);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .btn-submit:hover {
+        background-color: #5c3636;
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .form-header h1 {
+        color: var(--accent-color);
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
+
+    .form-header p {
+        color: #666;
+        font-size: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="add-book-form">
+    <div class="form-header">
+        <h1>Добавить новую книгу</h1>
+        <p>Заполните информацию о книге, которую хотите добавить в библиотеку</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" action="{% url 'books:add_book' %}">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="title">Название книги*</label>
+            <input type="text" id="title" name="title" required>
+        </div>
+
+        <div class="form-group">
+            <label for="author">Автор*</label>
+            <input type="text" id="author" name="author" required>
+        </div>
+
+        <div class="form-group">
+            <label for="genre">Жанр*</label>
+            <select id="genre" name="genre" required>
+                {% for code, name in GENRE_CHOICES %}
+                    <option value="{{ code }}">{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Описание</label>
+            <textarea id="description" name="description"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="published_date">Год публикации</label>
+            <input type="number" id="published_date" name="published_date" min="1" max="{% now 'Y' %}">
+        </div>
+
+        <div class="form-group">
+            <label for="cover">Обложка книги</label>
+            <input type="file" id="cover" name="cover" accept="image/*">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">Добавить книгу</button>
+        </div>
+    </form>
+</div>
+{% endblock %} 

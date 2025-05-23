@@ -22,37 +22,59 @@ class Author(models.Model):
 
 
 class Book(models.Model):
+    GENRE_CHOICES = [
+        ("fantasy", "Фэнтези"),
+        ("sci_fi", "Фантастика"),
+        ("thriller_horror", "Триллеры и хорроры"),
+        ("detective", "Детективы"),
+        ("romance", "Романтика"),
+        ("classic", "Классика"),
+        ("prose", "Проза"),
+        ("history", "История"),
+        ("biography", "Биографии и мемуары"),
+        ("psychology", "Психология"),
+        ("self_help", "Саморазвитие"),
+        ("business", "Бизнес"),
+        ("health", "Здоровье"),
+        ("young_adult", "Young Adult"),
+        ("non_fiction", "Нон-фикшн"),
+        ("comics", "Комиксы и графические романы"),
+        ("children", "Детям"),
+        ("audio", "Аудиокнига"),
+        ("other", "Другое")
+    ]
+
     title = models.CharField(max_length=255, verbose_name="Название книги")
     cover = models.ImageField(upload_to='book_covers/', blank=True, null=True, verbose_name="Обложка")
-    # Если у книги может быть несколько авторов – используем ManyToManyField
     authors = models.ManyToManyField('Author', related_name="books", verbose_name="Авторы")
-    genre = models.CharField(max_length=100, blank=True, verbose_name="Жанр")
+    genre = models.CharField(max_length=50, choices=GENRE_CHOICES, default='other', verbose_name="Жанр")
     description = models.TextField(blank=True, verbose_name="Описание")
     published_date = models.DateField(blank=True, null=True, verbose_name="Дата издания")
-    
-    # Фиксированный мировой рейтинг (например, рассчитанный на основе внешних данных)
     world_rating = models.FloatField(blank=True, null=True, verbose_name="Мировой рейтинг")
+    is_approved = models.BooleanField(default=False, verbose_name="Одобрено модератором")
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Добавил пользователь",
+        related_name="submitted_books"
+    )
 
     def __str__(self):
         return self.title
 
     @property
     def app_rating(self):
-        """
-        Вычисляет среднюю оценку, основанную на отзывах пользователей.
-        Возвращает None, если отзывов нет.
-        """
-        reviews = self.reviews.all()  # reviews – related_name из модели Review
+        reviews = self.reviews.all()
         if reviews.exists():
             return reviews.aggregate(average=Avg('rating'))['average']
         return None
 
     @property
     def all_reviews(self):
-        """
-        Возвращает QuerySet всех отзывов на книгу.
-        """
         return self.reviews.all()
+
 
 # ----------------------------
 # Модель отзыва (от пользователей приложения)
@@ -152,3 +174,25 @@ class Quote(models.Model):
         Возвращает сокращенный текст цитаты для отображения в списках
         """
         return f"{self.text[:100]}..." if len(self.text) > 100 else self.text
+
+class GlobalCollection(models.Model):
+    title = models.CharField(max_length=255, verbose_name="Название коллекции")
+    description = models.TextField(blank=True, null=True, verbose_name="Описание")
+    books = models.ManyToManyField(Book, related_name="global_collections", verbose_name="Книги")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    is_active = models.BooleanField(default=True, verbose_name="Активна")
+
+    class Meta:
+        verbose_name = "Глобальная коллекция"
+        verbose_name_plural = "Глобальные коллекции"
+
+    def __str__(self):
+        return self.title
+
+def add_book_from_openlibrary(request):
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        results = external_book_search(title)
+        # Обработка результатов и создание книги
+        return redirect('books:book_list')
+    return render(request, 'books/add_book.html')
