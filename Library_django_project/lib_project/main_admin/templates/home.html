@@ -1,69 +1,97 @@
 {% extends 'base.html' %}
 
-{% block title %}Главная — Моя Библиотека{% endblock %}
+{% block title %}Главная страница — Личная библиотека{% endblock %}
 
 {% block content %}
-<section class="hero">
-  <div class="hero-content">
-    <h1>Открой мир книг</h1>
-    <p>Наша библиотека — твой путь к новым знаниям, историям и эмоциям. Начни читать прямо сейчас.</p>
-    <a href="{% url 'user:my_library' %}" class="cta-button">Перейти в мою библиотеку</a>
-  </div>
-</section>
-
-<h2 class="section-title">Категории</h2>
-<div class="categories">
-  {% for genre in genres %}
-    <div class="category-card">
-      <h3>{{ genre.name }}</h3>
-      <p><a href="{% url 'books:genre' genre.slug %}">Узнать больше</a></p>
-    </div>
-  {% empty %}
-    <p>Категории не найдены.</p>
-  {% endfor %}
-</div>
-
-<h2 class="section-title">Популярное</h2>
-<div class="books-grid">
-  {% for book in popular_books %}
-    <div class="book-card">
-      {% if book.cover %}
-        <div class="book-cover" style="background-image: url('{{ book.cover.url }}');"></div>
-      {% else %}
-        <div class="book-cover" style="background-image: url('/static/images/default-cover.jpg');"></div>
-      {% endif %}
-      <div class="book-title">{{ book.title }}</div>
-      <div class="book-author">{{ book.author.name }}</div>
-      <div class="book-actions">
-        <a href="{% url 'books:detail' book.id %}"><button>Читать</button></a>
-      </div>
-    </div>
-  {% empty %}
-    <p>Книги пока не добавлены.</p>
-  {% endfor %}
-</div>
-
-<h2 class="section-title">Рекомендации на основе ваших предпочтений</h2>
-<div class="books-grid">
-  {% if user.is_authenticated %}
-    {% for book in recommended_books %}
-      <div class="book-card">
-        {% if book.cover %}
-          <div class="book-cover" style="background-image: url('{{ book.cover.url }}');"></div>
-        {% else %}
-          <div class="book-cover" style="background-image: url('/static/images/default-cover.jpg');"></div>
-        {% endif %}
-        <div class="book-title">{{ book.title }}</div>
-        <div class="book-author">{{ book.author.name }}</div>
-        <div class="book-actions">
-          <a href="{% url 'books:detail' book.id %}"><button>Читать</button></a>
+<main class="container">
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+            {{ message }}
         </div>
-      </div>
-    {% empty %}
-      <p>Пока нет рекомендаций. Пройдите тест при регистрации, чтобы получить их.</p>
-    {% endfor %}
-  {% else %}
-    <p><a href="{% url 'user:register' %}">Зарегистрируйтесь</a>, чтобы получить персональные рекомендации.</p>
-  {% endif %}
-</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Hero-секция -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>ОТКРОЙ МИР КНИГ</h1>
+            <p>Наша библиотека — твой путь к новым знаниям, историям и эмоциям.</p>
+            <p>Начни читать прямо сейчас.</p>
+            {% if user.is_authenticated %}
+                <a href="{% url 'books:user_library' %}" class="cta-button">Моя библиотека</a>
+            {% else %}
+                <a href="{% url 'users:login' %}" class="cta-button">Войти</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Категории -->
+    <h2 class="section-title">КАТЕГОРИИ</h2>
+    <div class="categories">
+        {% for genre_code, genre_name in GENRE_CHOICES %}
+        <a href="{% url 'books:catalog' %}?genre={{ genre_code }}" class="category-card">
+            <h3>{{ genre_name }}</h3>
+            <p>Узнать больше</p>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Популярное -->
+    <h2 class="section-title">ПОПУЛЯРНОЕ</h2>
+    <div class="books-grid">
+        {% for book in popular_books %}
+            <div class="book-card">
+                {% if book.cover %}
+                    <div class="book-cover" style="background-image: url('{{ book.cover.url }}');"></div>
+                {% else %}
+                    <div class="book-cover" style="background-image: url('/static/images/default-cover.jpg');"></div>
+                {% endif %}
+                <div class="book-title">{{ book.title }}</div>
+                <div class="book-author">
+                    {% for author in book.authors.all %}
+                        {{ author.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="book-actions">
+                    <a href="{% url 'books:detail' book.id %}"><button>Читать</button></a>
+                </div>
+            </div>
+        {% empty %}
+            <p>Книги пока не добавлены.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Рекомендации -->
+    <h2 class="section-title">РЕКОМЕНДАЦИИ ДЛЯ ВАС</h2>
+    {% if user.is_authenticated %}
+        <div class="books-grid">
+            {% for book in recommended_books %}
+                <div class="book-card">
+                    {% if book.cover %}
+                        <div class="book-cover" style="background-image: url('{{ book.cover.url }}');"></div>
+                    {% else %}
+                        <div class="book-cover" style="background-image: url('/static/images/default-cover.jpg');"></div>
+                    {% endif %}
+                    <div class="book-title">{{ book.title }}</div>
+                    <div class="book-author">
+                        {% for author in book.authors.all %}
+                            {{ author.name }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="book-actions">
+                        <a href="{% url 'books:detail' book.id %}"><button>Читать</button></a>
+                    </div>
+                </div>
+            {% empty %}
+                <p>Начните читать книги, чтобы получать персональные рекомендации.</p>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="login-prompt">Войдите в систему, чтобы получать персональные рекомендации.</p>
+        <a href="{% url 'users:login' %}" class="cta-button">Войти</a>
+    {% endif %}
+</main>
 {% endblock %}

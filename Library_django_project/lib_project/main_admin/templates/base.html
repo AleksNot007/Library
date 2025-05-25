@@ -6,17 +6,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Моя Библиотека{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <header>
     <div class="logo">Моя Библиотека</div>
     <nav>
-      <ul>
-        <li><a href="{% url 'books:home' %}">Главная</a></li>
+      <ul class="main-nav">
+        <li><a href="{% url 'home' %}">Главная</a></li>
         <li><a href="{% url 'books:catalog' %}">Каталог</a></li>
         <li><a href="{% url 'books:collections' %}">Подборки</a></li>
         {% if user.is_authenticated %}
         <li><a href="{% url 'books:user_library' %}">Моя библиотека</a></li>
+        {% endif %}
+      </ul>
+      <ul class="user-nav">
+        {% if user.is_authenticated %}
+          <li><a href="{% url 'users:profile' %}">Мой аккаунт</a></li>
+          <li><a href="{% url 'users:logout' %}">Выйти</a></li>
+        {% else %}
+          <li><a href="{% url 'users:login' %}">Войти</a></li>
+          <li><a href="{% url 'users:register' %}">Регистрация</a></li>
         {% endif %}
       </ul>
     </nav>

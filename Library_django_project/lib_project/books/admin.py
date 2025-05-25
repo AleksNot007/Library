@@ -110,12 +110,6 @@ class QuoteAdmin(admin.ModelAdmin):
         return obj.short_text
     short_text.short_description = "Текст цитаты"
 
-class UserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
-    list_filter = ('is_staff', 'is_superuser', 'is_active')
-    search_fields = ('username', 'first_name', 'last_name', 'email')
-    ordering = ('username',)
-
 class GlobalCollectionAdmin(admin.ModelAdmin):
     list_display = ('title', 'is_active', 'created_at')
     list_filter = ('is_active', 'created_at')
@@ -129,6 +123,5 @@ admin_site.register(Author, AuthorAdmin)
 admin_site.register(Review, ReviewAdmin)
 admin_site.register(UserBookRelation, UserBookRelationAdmin)
 admin_site.register(Quote, QuoteAdmin)
-admin_site.register(get_user_model(), UserAdmin)
 admin_site.register(GlobalCollection, GlobalCollectionAdmin)
                                            

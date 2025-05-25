@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'main_admin/css/auth.css' %}">
+{% endblock %}
+
+{% block title %}Выход из системы — Личная библиотека{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="login-container">
+        <h1>Выход из системы</h1>
+        <p>Вы успешно вышли из системы.</p>
+        <p>Через 3 секунды вы будете перенаправлены на главную страницу...</p>
+        <div class="additional-link">
+            <a href="/">Вернуться на главную</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Автоматический редирект на главную страницу через 3 секунды
+    setTimeout(function() {
+        window.location.href = "/";
+    }, 3000);
+</script>
+{% endblock %} 

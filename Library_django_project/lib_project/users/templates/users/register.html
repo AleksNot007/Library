@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block title %}Регистрация — Личная библиотека{% endblock %}
+
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="registration-container">
+        <h1>Регистрация</h1>
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <ul class="errorlist">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <label for="id_username">Имя пользователя</label>
+            {{ form.username }}
+
+            <label for="id_email">Электронная почта</label>
+            {{ form.email }}
+
+            <label for="id_password1">Пароль</label>
+            {{ form.password1 }}
+
+            <label for="id_password2">Повторите пароль</label>
+            {{ form.password2 }}
+
+            <button type="submit" class="submit-button">Зарегистрироваться</button>
+        </form>
+        <div class="additional-link">
+            <p>Уже есть аккаунт? <a href="{% url 'users:login' %}">Войти</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Добавляем плейсхолдеры для полей
+    const usernameInput = document.getElementById('id_username');
+    const emailInput = document.getElementById('id_email');
+    const password1Input = document.getElementById('id_password1');
+    const password2Input = document.getElementById('id_password2');
+
+    if (usernameInput) usernameInput.placeholder = 'Введите имя пользователя';
+    if (emailInput) emailInput.placeholder = 'Введите e-mail';
+    if (password1Input) password1Input.placeholder = 'Введите пароль';
+    if (password2Input) password2Input.placeholder = 'Повторите пароль';
+
+    // Добавляем проверку совпадения паролей
+    const form = document.querySelector('form');
+    form.addEventListener('submit', (event) => {
+        if (password1Input.value !== password2Input.value) {
+            event.preventDefault();
+            alert('Пароли не совпадают!');
+        }
+    });
+});
+</script>
+{% endblock %} 

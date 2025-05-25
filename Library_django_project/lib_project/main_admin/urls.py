@@ -22,16 +22,20 @@ from books import views as book_views
 from books.admin import admin_site
 from django.conf import settings
 from django.conf.urls.static import static
+from . import views as main_views
 
 urlpatterns = [
-    # Административная панель с кастомным AdminSite
+    # Административная панель
     path('admin/', admin_site.urls),
     
-    # Подключаем все URL-маршруты приложения books
+    # URL-маршруты для книг
     path('books/', include('books.urls')),
     
+    # URL-маршруты для пользователей
+    path('users/', include('users.urls', namespace='users')),
+    
     # Главная страница
-    path('', book_views.home, name='home'),
+    path('', main_views.home, name='home'),
 ]
 
 if settings.DEBUG:

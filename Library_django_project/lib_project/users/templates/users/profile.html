@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Мой профиль — Личная библиотека{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <h2>Мой профиль</h2>
+    
+    <div class="profile-info">
+        <h3>{{ user.username }}</h3>
+        <p>Дата регистрации: {{ user.date_joined|date:"d.m.Y" }}</p>
+        
+        <div class="profile-stats">
+            <div class="stat-item">
+                <span class="stat-label">Книг в библиотеке:</span>
+                <span class="stat-value">{{ user.books.count }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Прочитано книг:</span>
+                <span class="stat-value">{{ user.books_read.count }}</span>
+            </div>
+        </div>
+        
+        <div class="profile-actions">
+            <a href="{% url 'users:edit_profile' %}" class="edit-button">Редактировать профиль</a>
+            <a href="{% url 'books:user_library' %}" class="library-button">Моя библиотека</a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

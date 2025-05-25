@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block title %}Вход — Личная библиотека{% endblock %}
+
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="login-container">
+        <h1>Вход в аккаунт</h1>
+        <form method="post">
+            {% csrf_token %}
+            {% if form.errors %}
+            <ul class="errorlist">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <label for="id_username">E-mail или имя пользователя</label>
+            {{ form.username }}
+
+            <label for="id_password">Пароль</label>
+            {{ form.password }}
+
+            <button type="submit" class="submit-button">Войти</button>
+        </form>
+        <div class="additional-link">
+            <p>Нет аккаунта? <a href="{% url 'users:register' %}">Зарегистрироваться</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const usernameInput = document.getElementById('id_username');
+    const passwordInput = document.getElementById('id_password');
+
+    if (usernameInput) usernameInput.placeholder = 'Введите e-mail или имя';
+    if (passwordInput) passwordInput.placeholder = 'Введите пароль';
+});
+</script>
+{% endblock %}

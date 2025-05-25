@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Выход из системы — Личная библиотека{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h2>Выход из системы</h2>
+    <p class="logout-message">Вы успешно вышли из системы.</p>
+    <p class="auth-links">
+        <a href="{% url 'home' %}" class="home-button">Вернуться на главную</a>
+        <span class="separator">или</span>
+        <a href="{% url 'users:login' %}">Войти снова</a>
+    </p>
+</div>
+{% endblock %} 

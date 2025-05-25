@@ -1,0 +1,225 @@
+:root {
+  --cool-brown: #2c2b2b;
+  --white-trans: rgba(255, 255, 255, 0.9);
+  --accent-color: #4c2a2a;
+  --text-color: #ffffff;
+  --border-color: #ccc;
+  --font-serif: "Georgia", serif;
+  --border-radius: 8px;
+}
+
+.auth-wrapper {
+  background-color: var(--cool-brown);
+  font-family: var(--font-serif);
+  min-height: calc(100vh - 120px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  color: var(--text-color);
+}
+
+.login-container {
+  width: 380px;
+  background-color: var(--white-trans);
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  color: #1c1c1c;
+}
+
+.login-container h1 {
+  margin-bottom: 8px;
+  font-size: 24px;
+  text-align: center;
+  color: var(--accent-color);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  position: relative;
+}
+
+.login-container h1::after {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 2px;
+  background-color: var(--accent-color);
+  margin: 8px auto 0;
+}
+
+.login-container label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.login-container input[type="text"],
+.login-container input[type="email"],
+.login-container input[type="password"] {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  background-color: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.login-container input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.login-container .submit-button {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  background-color: var(--accent-color);
+  color: #fff;
+  transition: background-color 0.2s ease;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.login-container .submit-button:hover {
+  background-color: #5c3636;
+}
+
+.additional-link {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.additional-link a {
+  color: var(--accent-color);
+  text-decoration: none;
+}
+
+.additional-link a:hover {
+  text-decoration: underline;
+}
+
+.login-container .errorlist {
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: var(--border-radius);
+  padding: 8px;
+  margin-bottom: 16px;
+  list-style: none;
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    width: 90%;
+    padding: 20px;
+  }
+  .login-container h1 {
+    font-size: 20px;
+  }
+}
+
+.registration-container {
+  width: 380px;
+  background-color: var(--white-trans);
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  color: #1c1c1c;
+}
+
+.registration-container h1 {
+  margin-bottom: 8px;
+  font-size: 24px;
+  text-align: center;
+  color: var(--accent-color);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  position: relative;
+}
+
+.registration-container h1::after {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 2px;
+  background-color: var(--accent-color);
+  margin: 8px auto 0;
+}
+
+.registration-container label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.registration-container input[type="text"],
+.registration-container input[type="email"],
+.registration-container input[type="password"] {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  background-color: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.registration-container input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.registration-container .submit-button {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  background-color: var(--accent-color);
+  color: #fff;
+  transition: background-color 0.2s ease;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.registration-container .submit-button:hover {
+  background-color: #5c3636;
+}
+
+.registration-container .additional-link {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.registration-container .additional-link a {
+  color: var(--accent-color);
+  text-decoration: none;
+}
+
+.registration-container .additional-link a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .registration-container {
+    width: 90%;
+    padding: 20px;
+  }
+
+  .registration-container h1 {
+    font-size: 20px;
+  }
+}

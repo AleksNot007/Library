@@ -150,3 +150,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 AUTH_USER_MODEL = 'users.User'
+
+# Настройки аутентификации
+LOGIN_REDIRECT_URL = 'home'  # После успешного входа
+LOGOUT_REDIRECT_URL = 'home'  # После выхода
+LOGIN_URL = 'users:login'  # Страница входа для @login_required
+
+# Настройки сессий
+SESSION_COOKIE_AGE = 1209600  # 2 недели в секундах
+SESSION_COOKIE_SECURE = False  # Установите True в продакшене

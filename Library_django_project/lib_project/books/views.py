@@ -13,12 +13,30 @@ from django.core.files import File
 
 def home(request):
     """Главная страница"""
+    # Получаем популярные книги
     popular_books = Book.objects.filter(
         is_approved=True
     ).select_related('submitted_by').prefetch_related('authors').order_by('-id')[:4]
     
+    # Получаем рекомендованные книги для авторизованного пользователя
+    recommended_books = []
+    if request.user.is_authenticated:
+        # Получаем жанры, которые пользователь уже читал
+        user_genres = Book.objects.filter(
+            user_relations__user=request.user
+        ).values_list('genre', flat=True).distinct()
+        
+        # Получаем книги из тех же жанров, которые пользователь еще не читал
+        recommended_books = Book.objects.filter(
+            genre__in=user_genres,
+            is_approved=True
+        ).exclude(
+            user_relations__user=request.user
+        ).select_related('submitted_by').prefetch_related('authors').order_by('?')[:4]
+    
     context = {
         'popular_books': popular_books,
+        'recommended_books': recommended_books,
         'GENRE_CHOICES': Book.GENRE_CHOICES,
     }
     return render(request, 'books/home.html', context)
@@ -119,6 +137,7 @@ def book_detail(request, book_id):
     book = get_object_or_404(Book, id=book_id)
     return render(request, 'books/detail.html', {'book': book})
 
+@login_required
 def collections_list(request):
     """Список всех коллекций книг"""
     collections = UserBookRelation.objects.values('list_type').annotate(
@@ -126,6 +145,7 @@ def collections_list(request):
     ).order_by('list_type')
     return render(request, 'books/collections/list.html', {'collections': collections})
 
+@login_required
 def collection_detail(request, slug):
     """Детальная страница коллекции"""
     books = UserBookRelation.objects.filter(list_type=slug).select_related('book')
