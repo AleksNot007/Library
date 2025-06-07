@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Опрос завершен{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4">Спасибо за ваши ответы!</h1>
+        <p class="lead">На основе ваших предпочтений мы подобрали для вас следующие книги:</p>
+    </div>
+
+    {% if recommendations %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for book in recommendations %}
+        <div class="col">
+            <div class="card h-100">
+                {% if book.cover %}
+                <img src="{{ book.cover.url }}" class="card-img-top" alt="{{ book.title }}">
+                {% else %}
+                <div class="card-img-top bg-light text-center py-5">
+                    <i class="bi bi-book" style="font-size: 3rem;"></i>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ book.title }}</h5>
+                    <p class="card-text">
+                        <small class="text-muted">Рейтинг: {{ book.world_rating|floatformat:1 }}</small>
+                    </p>
+                    <a href="{% url 'books:detail' book.id %}" class="btn btn-primary">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info" role="alert">
+        К сожалению, мы пока не можем предложить вам книги на основе ваших предпочтений. 
+        Попробуйте изменить критерии поиска или вернуться позже.
+    </div>
+    {% endif %}
+
+    <div class="text-center mt-5">
+        <a href="{% url 'recommendations:survey' %}" class="btn btn-outline-primary me-2">Изменить предпочтения</a>
+        <a href="{% url 'books:catalog' %}" class="btn btn-primary">Перейти к каталогу</a>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% load book_tags %}
+
+{% block title %}Подборки книг — Личная библиотека{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Подборки книг</h1>
+
+    {% if top_rated_books %}
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="h3">Топ-100 книг по рейтингу</h2>
+            <a href="{% url 'books:collection_detail' collection_type='top_rated' %}" class="btn btn-outline-primary">
+                Смотреть все <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        <div class="row">
+            {% for book in top_rated_books|slice:":4" %}
+            <div class="col-md-3 mb-4">
+                <div class="card h-100">
+                    {% if book.cover %}
+                    <img src="{{ book.cover.url }}" class="card-img-top" alt="{{ book.title }}" style="height: 300px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
+                        <i class="fas fa-book fa-3x text-muted"></i>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ book.title }}</h5>
+                        <p class="card-text">
+                            {% for author in book.authors.all %}
+                            {{ author.name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-success">
+                                <i class="fas fa-star"></i> {{ book.avg_rating|floatformat:1 }}
+                            </span>
+                            <small class="text-muted">{{ book.reviews_count }} отзывов</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if popular_books %}
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="h3">Самые популярные книги</h2>
+            <a href="{% url 'books:collection_detail' collection_type='popular' %}" class="btn btn-outline-primary">
+                Смотреть все <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        <div class="row">
+            {% for book in popular_books|slice:":4" %}
+            <div class="col-md-3 mb-4">
+                <div class="card h-100">
+                    {% if book.cover %}
+                    <img src="{{ book.cover.url }}" class="card-img-top" alt="{{ book.title }}" style="height: 300px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
+                        <i class="fas fa-book fa-3x text-muted"></i>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ book.title }}</h5>
+                        <p class="card-text">
+                            {% for author in book.authors.all %}
+                            {{ author.name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary">
+                                <i class="fas fa-users"></i> {{ book.readers_count }}
+                            </span>
+                            <small class="text-muted">читателей</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if most_added_books %}
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="h3">Часто добавляемые книги</h2>
+            <a href="{% url 'books:collection_detail' collection_type='most_added' %}" class="btn btn-outline-primary">
+                Смотреть все <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        <div class="row">
+            {% for book in most_added_books|slice:":4" %}
+            <div class="col-md-3 mb-4">
+                <div class="card h-100">
+                    {% if book.cover %}
+                    <img src="{{ book.cover.url }}" class="card-img-top" alt="{{ book.title }}" style="height: 300px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
+                        <i class="fas fa-book fa-3x text-muted"></i>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ book.title }}</h5>
+                        <p class="card-text">
+                            {% for author in book.authors.all %}
+                            {{ author.name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-info">
+                                <i class="fas fa-plus"></i> {{ book.total_adds }}
+                            </span>
+                            <small class="text-muted">добавлений</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="mb-5">
+        <h2 class="h3 mb-4">Топ-100 по жанрам</h2>
+        <div class="row">
+            {% for genre_code, books in genre_top_books.items %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h3 class="h5 card-title">{{ dict|get_item:genre_code }}</h3>
+                        {% if books %}
+                        <ul class="list-unstyled">
+                            {% for book in books|slice:":5" %}
+                            <li class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <a href="{% url 'books:detail' book.id %}" class="text-decoration-none">
+                                            {{ book.title }}
+                                        </a>
+                                        <small class="text-muted d-block">
+                                            {% for author in book.authors.all %}
+                                            {{ author.name }}{% if not forloop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </small>
+                                    </div>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-star"></i> {{ book.avg_rating|floatformat:1 }}
+                                    </span>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted">В этом жанре пока нет книг с высоким рейтингом</p>
+                        {% endif %}
+                        <a href="{% url 'books:genre_collection_detail' genre=genre_code %}" class="btn btn-outline-primary btn-sm w-100">
+                            Смотреть все <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %} 

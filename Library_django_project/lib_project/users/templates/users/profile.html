@@ -2,29 +2,289 @@
 
 {% block title %}Мой профиль — Личная библиотека{% endblock %}
 
+{% block extra_css %}
+<style>
+    .profile-container {
+        max-width: 1200px;
+        margin: 30px auto;
+        padding: 20px;
+    }
+
+    .profile-header {
+        text-align: center;
+        margin-bottom: 40px;
+        color: #fff;
+    }
+
+    .profile-header h2 {
+        font-size: 32px;
+        margin-bottom: 10px;
+    }
+
+    .stats-section {
+        background: #fff;
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .section-title {
+        color: #4c2a2a;
+        font-size: 24px;
+        margin-bottom: 25px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+    }
+
+    .stat-card {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 120px;
+        transition: transform 0.2s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-label {
+        color: #666;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    .stat-value {
+        font-size: 28px;
+        font-weight: bold;
+        color: #4c2a2a;
+    }
+
+    .reading-stats {
+        margin-top: 30px;
+    }
+
+    .genre-stats {
+        margin-top: 30px;
+    }
+
+    .genre-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+    }
+
+    .genre-card {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        position: relative;
+        transition: transform 0.2s;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .genre-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .genre-name {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 10px;
+    }
+
+    .genre-count {
+        font-size: 28px;
+        font-weight: bold;
+        color: #4c2a2a;
+        margin: 10px 0;
+    }
+
+    .genre-percentage {
+        font-size: 14px;
+        color: #666;
+        margin-top: 5px;
+    }
+
+    .genre-progress {
+        width: 100%;
+        height: 4px;
+        background: #e9ecef;
+        margin-top: 15px;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .genre-progress-fill {
+        height: 100%;
+        background: #4c2a2a;
+        transition: width 0.3s ease;
+    }
+
+    .survey-info {
+        background: #fff;
+        padding: 30px;
+        border-radius: 10px;
+        text-align: center;
+        margin-top: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .btn-retake-survey {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #4c2a2a;
+        color: #fff;
+        border-radius: 6px;
+        text-decoration: none;
+        margin-top: 15px;
+        transition: background 0.2s;
+    }
+
+    .btn-retake-survey:hover {
+        background: #3a1f1f;
+        color: #fff;
+    }
+
+    .profile-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+
+    .profile-actions a {
+        padding: 12px 24px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background 0.2s;
+    }
+
+    .edit-button {
+        background: #4c2a2a;
+        color: #fff;
+    }
+
+    .edit-button:hover {
+        background: #3a1f1f;
+        color: #fff;
+    }
+
+    .library-button {
+        background: #013220;
+        color: #fff;
+    }
+
+    .library-button:hover {
+        background: #012518;
+        color: #fff;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="profile-container">
-    <h2>Мой профиль</h2>
-    
-    <div class="profile-info">
-        <h3>{{ user.username }}</h3>
+    <div class="profile-header">
+        <h2>{{ user.username }}</h2>
         <p>Дата регистрации: {{ user.date_joined|date:"d.m.Y" }}</p>
-        
-        <div class="profile-stats">
-            <div class="stat-item">
-                <span class="stat-label">Книг в библиотеке:</span>
-                <span class="stat-value">{{ user.books.count }}</span>
+    </div>
+
+    <div class="stats-section">
+        <h3 class="section-title">Моя библиотека</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Всего книг в библиотеке</div>
+                <div class="stat-value">{{ total_books }}</div>
             </div>
-            <div class="stat-item">
-                <span class="stat-label">Прочитано книг:</span>
-                <span class="stat-value">{{ user.books_read.count }}</span>
+            <div class="stat-card">
+                <div class="stat-label">Прочитано книг</div>
+                <div class="stat-value">{{ books_read }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Читаю сейчас</div>
+                <div class="stat-value">{{ books_reading }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Хочу прочитать</div>
+                <div class="stat-value">{{ books_want }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">В избранном</div>
+                <div class="stat-value">{{ favorite_books }}</div>
             </div>
         </div>
-        
-        <div class="profile-actions">
-            <a href="{% url 'users:edit_profile' %}" class="edit-button">Редактировать профиль</a>
-            <a href="{% url 'books:user_library' %}" class="library-button">Моя библиотека</a>
+    </div>
+
+    <div class="stats-section">
+        <h3 class="section-title">Статистика чтения</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Добавлено книг за последний месяц</div>
+                <div class="stat-value">{{ books_added_last_month }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Прочитано за последний месяц</div>
+                <div class="stat-value">{{ books_read_last_month }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Средняя скорость чтения (книг в месяц)</div>
+                <div class="stat-value">{{ reading_speed }}</div>
+            </div>
         </div>
+    </div>
+
+    {% if genre_stats %}
+    <div class="stats-section">
+        <h3 class="section-title">Любимые жанры</h3>
+        <div class="genre-grid">
+            {% for stat in genre_stats %}
+            <div class="genre-card">
+                <div class="genre-name">{{ stat.book__genre }}</div>
+                <div class="genre-count">{{ stat.count }}</div>
+                <div class="genre-percentage">
+                    {% widthratio stat.count books_read 100 %}% прочитанных книг
+                </div>
+                <div class="genre-progress">
+                    <div class="genre-progress-fill" style="width: {% widthratio stat.count books_read 100 %}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="survey-info">
+        {% if has_survey %}
+            <h3>Опрос предпочтений</h3>
+            <p>Последнее обновление: {{ survey_date|date:"d.m.Y" }}</p>
+            <p>Рекомендуется обновлять предпочтения каждые 3 месяца для получения более точных рекомендаций.</p>
+            <a href="{% url 'recommendations:survey' %}" class="btn-retake-survey">Пройти опрос заново</a>
+        {% else %}
+            <h3>Пройдите опрос предпочтений</h3>
+            <p>Пройдите короткий опрос, чтобы получать персонализированные рекомендации книг.</p>
+            <a href="{% url 'recommendations:survey' %}" class="btn-retake-survey">Пройти опрос</a>
+        {% endif %}
+    </div>
+
+    <div class="profile-actions">
+        <a href="{% url 'users:edit_profile' %}" class="edit-button">Редактировать профиль</a>
+        <a href="{% url 'books:user_library' %}" class="library-button">Моя библиотека</a>
     </div>
 </div>
 {% endblock %} 

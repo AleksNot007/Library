@@ -1,17 +1,41 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ book.title }} - Подробная информация{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-4">
             {% if book.cover %}
                 <img src="{{ book.cover.url }}" class="img-fluid rounded" alt="{{ book.title }}">
             {% else %}
-                <div class="bg-light text-center p-5 rounded">
+                <div class="book-cover-placeholder">
                     <i class="fas fa-book fa-4x text-secondary"></i>
                 </div>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+            <div class="action-buttons mt-4">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success add-to-list" data-book-id="{{ book.id }}" data-list-type="in_progress">
+                        <i class="fas fa-book-reader"></i> Читаю сейчас
+                    </button>
+                    <button class="btn btn-primary add-to-list" data-book-id="{{ book.id }}" data-list-type="want">
+                        <i class="fas fa-bookmark"></i> Хочу прочитать
+                    </button>
+                    <button class="btn btn-info add-to-list" data-book-id="{{ book.id }}" data-list-type="read">
+                        <i class="fas fa-check"></i> Прочитано
+                    </button>
+                    <button class="btn btn-warning add-to-list" data-book-id="{{ book.id }}" data-list-type="favorite">
+                        <i class="fas fa-star"></i> В избранное
+                    </button>
+                    <button class="btn btn-danger add-to-list" data-book-id="{{ book.id }}" data-list-type="blacklist">
+                        <i class="fas fa-ban"></i> В черный список
+                    </button>
+                </div>
+            </div>
             {% endif %}
         </div>
         <div class="col-md-8">
@@ -49,17 +73,288 @@
         </div>
     </div>
 
-    {% if user.is_authenticated %}
-    <div class="row mt-4">
-        <div class="col">
-            <h3>Действия</h3>
-            <div class="btn-group">
-                <a href="#" class="btn btn-outline-primary">Добавить в избранное</a>
-                <a href="#" class="btn btn-outline-success">Читаю сейчас</a>
-                <a href="#" class="btn btn-outline-info">Буду читать</a>
+    <!-- Секция отзывов -->
+    <div class="reviews-section mt-5">
+        <h3>Отзывы о книге</h3>
+        
+        {% if user.is_authenticated %}
+        <div class="add-review-form mb-4">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addReviewModal">
+                <i class="fas fa-plus"></i> Написать отзыв
+            </button>
+        </div>
+        {% endif %}
+
+        {% if book.reviews.all %}
+            <div class="reviews-list">
+                {% for review in book.reviews.all %}
+                    <div class="review-card mb-4">
+                        <div class="review-header">
+                            <div class="user-info">
+                                <strong>{{ review.user.username }}</strong>
+                                <span class="text-muted">{{ review.created_at|date:"d.m.Y" }}</span>
+                            </div>
+                            <div class="rating">
+                                <span class="stars">
+                                    {% for i in "12345" %}
+                                        {% if i|add:"0" <= review.rating %}
+                                            ★
+                                        {% else %}
+                                            ☆
+                                        {% endif %}
+                                    {% endfor %}
+                                </span>
+                                <span class="rating-text">{{ review.rating }}/5</span>
+                            </div>
+                        </div>
+                        <div class="review-content mt-2">
+                            {{ review.text|linebreaks }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">Пока нет отзывов. Будьте первым!</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Модальное окно для добавления отзыва -->
+<div class="modal fade" id="addReviewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Написать отзыв</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reviewForm" method="post" action="{% url 'books:add_review' book.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Оценка:</label>
+                        <div class="rating-input">
+                            {% for i in "12345" %}
+                            <input type="radio" name="rating" value="{{ i }}" id="star{{ i }}" required>
+                            <label for="star{{ i }}">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Текст отзыва:</label>
+                        <textarea class="form-control" name="comment" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Отправить</button>
+                </form>
             </div>
         </div>
     </div>
-    {% endif %}
 </div>
+
+<style>
+    .book-cover-placeholder {
+        width: 100%;
+        height: 400px;
+        background-color: #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 5px;
+    }
+
+    .action-buttons .btn {
+        text-align: left;
+        padding: 10px 15px;
+    }
+
+    .action-buttons .btn i {
+        margin-right: 8px;
+        width: 20px;
+    }
+
+    .review-card {
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 20px;
+        background-color: #fff;
+    }
+
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+
+    .stars {
+        color: #ffc107;
+        font-size: 1.2em;
+        margin-right: 5px;
+    }
+
+    .rating-text {
+        color: #666;
+    }
+
+    .rating-input {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+    }
+
+    .rating-input input {
+        display: none;
+    }
+
+    .rating-input label {
+        cursor: pointer;
+        font-size: 1.5em;
+        color: #ddd;
+        margin: 0 2px;
+    }
+
+    .rating-input label:hover,
+    .rating-input label:hover ~ label,
+    .rating-input input:checked ~ label {
+        color: #ffc107;
+    }
+
+    .notification-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+        min-width: 250px;
+        max-width: 350px;
+    }
+
+    .add-to-list {
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .add-to-list.active {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+
+    .add-to-list.active::after {
+        content: '✓';
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .fa-spinner {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+{% block extra_js %}
+<script>
+    // Передаем данные из Django в JavaScript
+    const CURRENT_LIST_TYPE = '{{ current_list_type|default:"" }}';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Получаем CSRF токен из cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        // Функция для показа уведомлений
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show notification-toast`;
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(notification);
+            
+            // Автоматически скрываем через 3 секунды
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Проверяем текущий список книги при загрузке страницы
+        if (CURRENT_LIST_TYPE) {
+            const currentButton = document.querySelector(`.add-to-list[data-list-type="${CURRENT_LIST_TYPE}"]`);
+            if (currentButton) {
+                currentButton.classList.add('active');
+            }
+        }
+
+        // Обработка добавления в список
+        document.querySelectorAll('.add-to-list').forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const bookId = this.dataset.bookId;
+                const listType = this.dataset.listType;
+                const originalText = this.innerHTML;
+                const button = this;
+                
+                // Показываем состояние загрузки
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+                
+                fetch(`/books/book/${bookId}/add-to-list/${listType}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showNotification(data.message, 'success');
+                        
+                        // Обновляем состояние кнопок
+                        document.querySelectorAll('.add-to-list').forEach(btn => {
+                            btn.classList.remove('active');
+                        });
+                        
+                        if (data.action !== 'removed') {
+                            button.classList.add('active');
+                        }
+                    } else {
+                        showNotification(data.message || 'Произошла ошибка', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Произошла ошибка при обработке запроса', 'danger');
+                })
+                .finally(() => {
+                    // Восстанавливаем исходное состояние кнопки
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %} 

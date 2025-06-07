@@ -1,0 +1,186 @@
+{% extends 'recommendations/survey_base.html' %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+alert('JavaScript загружен!');
+
+// Добавляем глобальный обработчик ошибок
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+    console.error('Ошибка: ', msg);
+    console.error('URL: ', url);
+    console.error('Строка: ', lineNo);
+    console.error('Колонка: ', columnNo);
+    console.error('Объект ошибки: ', error);
+    return false;
+};
+
+console.log('Скрипт начал загружаться');
+
+// Дожидаемся полной загрузки DOM
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM загружен');
+    
+    try {
+        // Получаем все необходимые элементы
+        const form = document.getElementById('genreForm');
+        const counter = document.getElementById('genreCounter');
+        const warning = document.getElementById('genreWarning');
+        const submitButton = document.getElementById('submitButton');
+        
+        console.log('Найденные элементы:', {
+            form: form ? 'найден' : 'не найден',
+            counter: counter ? 'найден' : 'не найден',
+            warning: warning ? 'найден' : 'не найден',
+            submitButton: submitButton ? 'найден' : 'не найден'
+        });
+
+        // Проверяем наличие чекбоксов
+        const checkboxes = document.querySelectorAll('input[name="preferred_genres"]');
+        console.log('Найдено чекбоксов:', checkboxes.length);
+
+        if (!form || !counter || !warning || !submitButton || checkboxes.length === 0) {
+            console.error('Не все элементы найдены на странице!');
+            return;
+        }
+
+        const MAX_GENRES = 5;
+
+        // Функция обновления интерфейса
+        function updateUI() {
+            try {
+                const selectedCheckboxes = document.querySelectorAll('input[name="preferred_genres"]:checked');
+                const selectedCount = selectedCheckboxes.length;
+                
+                console.log('Обновление UI:');
+                console.log('- Выбрано жанров:', selectedCount);
+                console.log('- Выбранные жанры:', Array.from(selectedCheckboxes).map(cb => cb.value));
+
+                // Обновляем счетчик
+                counter.textContent = selectedCount;
+                console.log('- Обновлен счетчик:', counter.textContent);
+
+                // Управляем предупреждением
+                warning.classList.toggle('d-none', selectedCount <= MAX_GENRES);
+                console.log('- Предупреждение:', selectedCount > MAX_GENRES ? 'показано' : 'скрыто');
+
+                // Управляем кнопкой
+                const shouldBeDisabled = selectedCount === 0 || selectedCount > MAX_GENRES;
+                submitButton.disabled = shouldBeDisabled;
+                console.log('- Кнопка:', shouldBeDisabled ? 'заблокирована' : 'активна');
+            } catch (error) {
+                console.error('Ошибка в updateUI:', error);
+            }
+        }
+
+        // Добавляем обработчики на все чекбоксы
+        checkboxes.forEach(function(checkbox) {
+            checkbox.addEventListener('click', function(event) {
+                try {
+                    console.log('Клик по чекбоксу:', {
+                        value: this.value,
+                        checked: this.checked,
+                        id: this.id
+                    });
+                    
+                    const currentCount = document.querySelectorAll('input[name="preferred_genres"]:checked').length;
+                    console.log('Текущее количество выбранных:', currentCount);
+
+                    // Если пытаемся выбрать больше 5 жанров
+                    if (this.checked && currentCount > MAX_GENRES) {
+                        console.log('Превышен лимит жанров, отменяем выбор');
+                        this.checked = false;
+                        warning.classList.remove('d-none');
+                    }
+                    
+                    updateUI();
+                } catch (error) {
+                    console.error('Ошибка в обработчике клика:', error);
+                }
+            });
+            
+            // Проверяем начальное состояние чекбокса
+            console.log('Начальное состояние чекбокса:', {
+                value: checkbox.value,
+                checked: checkbox.checked,
+                id: checkbox.id
+            });
+        });
+
+        // Обработчик отправки формы
+        form.addEventListener('submit', function(e) {
+            try {
+                e.preventDefault();
+                console.log('Попытка отправки формы');
+
+                const selectedCount = document.querySelectorAll('input[name="preferred_genres"]:checked').length;
+                console.log('Количество выбранных жанров при отправке:', selectedCount);
+
+                if (selectedCount === 0) {
+                    alert('Пожалуйста, выберите хотя бы один жанр');
+                    return;
+                }
+
+                if (selectedCount > MAX_GENRES) {
+                    alert(`Пожалуйста, выберите не более ${MAX_GENRES} жанров. Сейчас выбрано: ${selectedCount}`);
+                    return;
+                }
+
+                console.log('Отправка формы...');
+                const formData = new FormData(this);
+                console.log('Выбранные жанры:', Array.from(formData.getAll('preferred_genres')));
+                saveAndContinue(formData, 1);
+            } catch (error) {
+                console.error('Ошибка при отправке формы:', error);
+            }
+        });
+
+        // Инициализация начального состояния
+        console.log('Запуск начальной инициализации...');
+        updateUI();
+        console.log('Инициализация завершена');
+        
+    } catch (error) {
+        console.error('Общая ошибка в DOMContentLoaded:', error);
+    }
+});
+
+console.log('Скрипт полностью загружен');
+</script>
+{% endblock %}
+
+{% block step_content %}
+<h2 class="mb-4">Выберите ваши любимые жанры</h2>
+<p class="text-muted mb-4">Выберите до 5 жанров, которые вам больше всего нравятся</p>
+
+<form id="genreForm" class="needs-validation" novalidate>
+    {% csrf_token %}
+    <div class="row g-3">
+        {% for code, name in genres %}
+        <div class="col-md-4">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="preferred_genres" 
+                       value="{{ code }}" id="genre_{{ code }}">
+                <label class="form-check-label" for="genre_{{ code }}">
+                    {{ name }}
+                </label>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="alert alert-warning mt-3 d-none" id="genreWarning">
+        Вы можете выбрать максимум 5 жанров
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+        <div class="text-muted">
+            Выбрано жанров: <span id="genreCounter">0</span> из 5
+        </div>
+        <button type="submit" class="btn btn-primary" id="submitButton" disabled>
+            Далее
+            <i class="bi bi-arrow-right ms-2"></i>
+        </button>
+    </div>
+</form>
+{% endblock %} 

@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Опрос читательских предпочтений{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="mb-4">Расскажите о ваших читательских предпочтениях</h1>
+    <p class="lead mb-5">Этот опрос поможет нам подобрать книги, которые вам понравятся</p>
+
+    <form method="post" action="{% url 'recommendations:save_survey' %}" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <!-- Жанровые предпочтения -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title">1. Предпочтительные жанры</h3>
+                <p class="text-muted">Выберите до 3 любимых жанров</p>
+                <div class="row g-3">
+                    {% for code, name in genres %}
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="preferred_genres" value="{{ code }}" id="genre_pref_{{ code }}">
+                            <label class="form-check-label" for="genre_pref_{{ code }}">{{ name }}</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Нежелательные жанры -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title">2. Нежелательные жанры</h3>
+                <p class="text-muted">Выберите жанры, которые вы предпочитаете не читать</p>
+                <div class="row g-3">
+                    {% for code, name in genres %}
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="banned_genres" value="{{ code }}" id="genre_ban_{{ code }}">
+                            <label class="form-check-label" for="genre_ban_{{ code }}">{{ name }}</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Цель чтения -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title">3. Цель текущего чтения</h3>
+                <div class="row g-3">
+                    {% for code, name in reading_goals %}
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="reading_goal" value="{{ code }}" id="goal_{{ code }}" required>
+                            <label class="form-check-label" for="goal_{{ code }}">{{ name }}</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Атмосфера -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title">4. Атмосфера и темп сюжета</h3>
+                <div class="row g-3">
+                    {% for code, name in mood_tags %}
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="mood_tags" value="{{ code }}" id="mood_{{ code }}">
+                            <label class="form-check-label" for="mood_{{ code }}">{{ name }}</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Частота чтения -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title">5. Частота чтения</h3>
+                <div class="row g-3">
+                    {% for value, label in reading_frequencies %}
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="reading_frequency" value="{{ value }}" id="freq_{{ value }}" required>
+                            <label class="form-check-label" for="freq_{{ value }}">{{ label }}</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Языки -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title">6. Предпочитаемые языки оригинала</h3>
+                <div class="row g-3">
+                    {% for lang in languages %}
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="languages" value="{{ lang.code }}" id="lang_{{ lang.code }}">
+                            <label class="form-check-label" for="lang_{{ lang.code }}">{{ lang.name }}</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Любимые авторы -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title">7. Любимые авторы</h3>
+                <p class="text-muted">До 5 авторов</p>
+                <div class="authors-container">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control author-search" placeholder="Начните вводить имя автора...">
+                        <div class="authors-suggestions dropdown-menu w-100"></div>
+                    </div>
+                    <div class="selected-authors"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Любимые книги -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title">8. Любимые книги</h3>
+                <p class="text-muted">До 5 книг</p>
+                <div class="books-container">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control book-search" placeholder="Начните вводить название книги...">
+                        <div class="books-suggestions dropdown-menu w-100"></div>
+                    </div>
+                    <div class="selected-books"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Контент-фильтры -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title">9. Контент-фильтры</h3>
+                <p class="text-muted">Отметьте темы, которые вы предпочитаете не встречать в книгах</p>
+                <div class="row g-3">
+                    {% for code, name in content_filters %}
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="content_filters" value="{{ code }}" id="filter_{{ code }}">
+                            <label class="form-check-label" for="filter_{{ code }}">{{ name }}</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="col-12 mt-3">
+                        <label for="other_filters" class="form-label">Другие темы (через запятую)</label>
+                        <input type="text" class="form-control" id="other_filters" name="other_filters">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg">Сохранить предпочтения</button>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Ограничение выбора жанров (не более 3)
+    const preferredGenres = document.querySelectorAll('input[name="preferred_genres"]');
+    preferredGenres.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const checked = document.querySelectorAll('input[name="preferred_genres"]:checked');
+            if (checked.length > 3) {
+                this.checked = false;
+            }
+        });
+    });
+
+    // Автодополнение для авторов
+    const authorSearch = document.querySelector('.author-search');
+    const authorSuggestions = document.querySelector('.authors-suggestions');
+    const selectedAuthors = document.querySelector('.selected-authors');
+    
+    authorSearch.addEventListener('input', debounce(function() {
+        if (this.value.length < 2) return;
+        
+        fetch(`{% url 'recommendations:author_autocomplete' %}?q=${encodeURIComponent(this.value)}`)
+            .then(response => response.json())
+            .then(data => {
+                authorSuggestions.innerHTML = '';
+                data.forEach(author => {
+                    const item = document.createElement('a');
+                    item.classList.add('dropdown-item');
+                    item.href = '#';
+                    item.textContent = author.name;
+                    item.dataset.id = author.id;
+                    item.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        addAuthor(author.id, author.name);
+                        authorSearch.value = '';
+                        authorSuggestions.innerHTML = '';
+                    });
+                    authorSuggestions.appendChild(item);
+                });
+                authorSuggestions.classList.add('show');
+            });
+    }, 300));
+
+    // Автодополнение для книг
+    const bookSearch = document.querySelector('.book-search');
+    const bookSuggestions = document.querySelector('.books-suggestions');
+    const selectedBooks = document.querySelector('.selected-books');
+    
+    bookSearch.addEventListener('input', debounce(function() {
+        if (this.value.length < 2) return;
+        
+        fetch(`{% url 'recommendations:book_autocomplete' %}?q=${encodeURIComponent(this.value)}`)
+            .then(response => response.json())
+            .then(data => {
+                bookSuggestions.innerHTML = '';
+                data.forEach(book => {
+                    const item = document.createElement('a');
+                    item.classList.add('dropdown-item');
+                    item.href = '#';
+                    item.textContent = book.title;
+                    item.dataset.id = book.id;
+                    item.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        addBook(book.id, book.title);
+                        bookSearch.value = '';
+                        bookSuggestions.innerHTML = '';
+                    });
+                    bookSuggestions.appendChild(item);
+                });
+                bookSuggestions.classList.add('show');
+            });
+    }, 300));
+
+    function addAuthor(id, name) {
+        if (selectedAuthors.children.length >= 5) return;
+        
+        const container = document.createElement('div');
+        container.classList.add('selected-item', 'mb-2');
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'favorite_authors';
+        input.value = id;
+        
+        const badge = document.createElement('span');
+        badge.classList.add('badge', 'bg-primary', 'me-2');
+        badge.textContent = name;
+        
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.classList.add('btn', 'btn-sm', 'btn-danger');
+        remove.textContent = '×';
+        remove.onclick = function() {
+            container.remove();
+        };
+        
+        container.appendChild(input);
+        container.appendChild(badge);
+        container.appendChild(remove);
+        selectedAuthors.appendChild(container);
+    }
+
+    function addBook(id, title) {
+        if (selectedBooks.children.length >= 5) return;
+        
+        const container = document.createElement('div');
+        container.classList.add('selected-item', 'mb-2');
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'favorite_books';
+        input.value = id;
+        
+        const badge = document.createElement('span');
+        badge.classList.add('badge', 'bg-primary', 'me-2');
+        badge.textContent = title;
+        
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.classList.add('btn', 'btn-sm', 'btn-danger');
+        remove.textContent = '×';
+        remove.onclick = function() {
+            container.remove();
+        };
+        
+        container.appendChild(input);
+        container.appendChild(badge);
+        container.appendChild(remove);
+        selectedBooks.appendChild(container);
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func.apply(this, args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Закрытие выпадающих списков при клике вне них
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.authors-container')) {
+            authorSuggestions.classList.remove('show');
+        }
+        if (!e.target.closest('.books-container')) {
+            bookSuggestions.classList.remove('show');
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock %} 

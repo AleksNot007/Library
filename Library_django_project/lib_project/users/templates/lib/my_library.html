@@ -1,4 +1,212 @@
-<!DOCTYPE html>
-<html>
+{% extends 'base.html' %}
+{% load static %}
 
-</html>
+{% block title %}Моя библиотека{% endblock %}
+
+{% block content %}
+<div class="library-container">
+    <!-- Навигационные вкладки -->
+    <div class="nav-tabs-wrapper">
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <a class="nav-link active" href="{% url 'books:user_library' %}">
+                    Моя библиотека
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'books:user_reviews' %}">
+                    Мои отзывы
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'books:user_quotes' %}">
+                    Мои цитаты
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'books:user_blacklist' %}">
+                    Черный список
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Личные подборки -->
+    <div class="collections-section mb-4">
+        <h2>Мои подборки</h2>
+        <div class="collections-grid">
+            <div class="collection-card">
+                <h3>Читаю сейчас</h3>
+                <div class="books-grid">
+                    {% for book in reading_now %}
+                        <div class="book-card">
+                            <a href="{% url 'books:detail' book.book.id %}" class="book-link">
+                                <div class="book-cover-placeholder"></div>
+                                <h4>{{ book.book.title }}</h4>
+                                <p class="authors">{{ book.book.authors.all|join:", " }}</p>
+                            </a>
+                        </div>
+                    {% empty %}
+                        <p>Нет книг в процессе чтения</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="collection-card">
+                <h3>Хочу прочитать</h3>
+                <div class="books-grid">
+                    {% for book in want_to_read %}
+                        <div class="book-card">
+                            <a href="{% url 'books:detail' book.book.id %}" class="book-link">
+                                <div class="book-cover-placeholder"></div>
+                                <h4>{{ book.book.title }}</h4>
+                                <p class="authors">{{ book.book.authors.all|join:", " }}</p>
+                            </a>
+                        </div>
+                    {% empty %}
+                        <p>Список желаемого пуст</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="collection-card">
+                <h3>Прочитанные</h3>
+                <div class="books-grid">
+                    {% for book in finished %}
+                        <div class="book-card">
+                            <a href="{% url 'books:detail' book.book.id %}" class="book-link">
+                                <div class="book-cover-placeholder"></div>
+                                <h4>{{ book.book.title }}</h4>
+                                <p class="authors">{{ book.book.authors.all|join:", " }}</p>
+                            </a>
+                        </div>
+                    {% empty %}
+                        <p>Нет прочитанных книг</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="collection-card">
+                <h3>Избранное</h3>
+                <div class="books-grid">
+                    {% for book in favorites %}
+                        <div class="book-card">
+                            <a href="{% url 'books:detail' book.book.id %}" class="book-link">
+                                <div class="book-cover-placeholder"></div>
+                                <h4>{{ book.book.title }}</h4>
+                                <p class="authors">{{ book.book.authors.all|join:", " }}</p>
+                            </a>
+                        </div>
+                    {% empty %}
+                        <p>В избранном пока пусто</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Стили -->
+<style>
+    .library-container {
+        padding: 20px;
+    }
+
+    .nav-tabs-wrapper {
+        background-color: #f8f9fa;
+        padding: 10px 10px 0;
+        border-radius: 5px 5px 0 0;
+    }
+
+    .nav-tabs .nav-link {
+        color: #495057;
+        border: 1px solid transparent;
+        border-radius: 5px 5px 0 0;
+        padding: 10px 20px;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #1a472a;
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+    }
+
+    .collections-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .collection-card {
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        background-color: #fff;
+    }
+
+    .collection-card h3 {
+        color: #1a472a;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .books-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+    }
+
+    .book-card {
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 10px;
+        text-align: center;
+    }
+
+    .book-cover-placeholder {
+        width: 120px;
+        height: 180px;
+        background-color: #f0f0f0;
+        margin: 0 auto 10px;
+        border-radius: 3px;
+    }
+
+    .book-card h4 {
+        font-size: 1em;
+        margin: 10px 0 5px;
+        color: #333;
+    }
+
+    .authors {
+        font-size: 0.9em;
+        color: #666;
+        font-style: italic;
+    }
+
+    h2 {
+        color: #1a472a;
+        margin-bottom: 20px;
+    }
+
+    .book-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .book-link:hover {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .book-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .book-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}

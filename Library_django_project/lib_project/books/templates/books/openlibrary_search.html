@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load book_extras %}
 
-{% block title %}Поиск в Open Library{% endblock %}
+{% block title %}Поиск книг в OpenLibrary — Личная библиотека{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -141,75 +142,178 @@
         background: #fff;
         border-radius: 8px;
     }
+
+    .language-filter {
+        margin-left: 10px;
+        min-width: 150px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="search-container">
-    <div class="search-header">
-        <h1>Поиск книг в Open Library</h1>
-        <form method="get" class="search-form">
-            {{ form.as_p }}
-            <button type="submit">Найти</button>
-        </form>
+<div class="container mt-4">
+    <h1>Поиск книг в OpenLibrary</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <form method="get" class="d-flex align-items-center">
+                <div class="input-group">
+                    <input type="search" name="q" class="form-control" placeholder="Введите название книги..." value="{{ query|default:'' }}" required>
+                    <select name="language" class="form-select language-filter">
+                        <option value="">Все языки</option>
+                        <option value="rus" {% if selected_language == 'rus' %}selected{% endif %}>Только русский</option>
+                        {% if language_choices %}
+                            {% for code, name in language_choices %}
+                                {% if code != 'rus' %}
+                                <option value="{{ code }}" {% if selected_language == code %}selected{% endif %}>{{ name }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search"></i> Найти
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
+    {% if query %}
+        {% if not results %}
+        <div class="alert alert-info">
+            <h4 class="alert-heading">По запросу "{{ query }}" ничего не найдено в OpenLibrary</h4>
+            <p>К сожалению, мы не смогли найти книги в OpenLibrary. Вы можете:</p>
+            <ul>
+                <li>Проверить правильность написания</li>
+                <li>Попробовать использовать другие ключевые слова</li>
+                <li>Попробовать поискать на другом языке</li>
+                {% if selected_language %}
+                <li>Убрать фильтр по языку</li>
+                {% endif %}
+            </ul>
+            <hr>
+            <p class="mb-0">Не нашли книгу в OpenLibrary? Вы можете добавить её самостоятельно:</p>
+            <div class="mt-3">
+                <a href="{% url 'books:add_book' %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Добавить книгу вручную
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="mb-4">
+            <h2>Результаты поиска</h2>
+            <p>Найдено книг: {{ results.paginator.count }}</p>
+            {% if not selected_language %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Результаты отсортированы: сначала показаны книги на русском языке
+            </div>
+            {% endif %}
+            <div class="alert alert-info">
+                <p class="mb-0">
+                    Не нашли нужную книгу? Вы можете 
+                    <a href="{% url 'books:add_book' %}" class="alert-link">добавить её вручную</a>.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+
     {% if results %}
-    <h2 class="results-title">Результаты поиска</h2>
-    <div class="book-grid">
+    <div class="row">
         {% for book in results %}
-        <div class="book-item">
-            {% if book.cover_i %}
-            <img src="https://covers.openlibrary.org/b/id/{{ book.cover_i }}-L.jpg" 
-                 class="book-cover" alt="{{ book.title }}">
-            {% else %}
-            <div class="book-cover"></div>
-            {% endif %}
-            <h3 class="book-title">{{ book.title }}</h3>
-            <p class="book-author">{{ book.author_name.0|default:"Неизвестен" }}</p>
-            {% if book.first_publish_year %}
-            <p class="book-year">{{ book.first_publish_year }}</p>
-            {% endif %}
-            
-            <form method="post" action="{% url 'books:add_from_openlibrary' %}">
-                {% csrf_token %}
-                <input type="hidden" name="title" value="{{ book.title }}">
-                <input type="hidden" name="author" value="{{ book.author_name.0|default:'Unknown Author' }}">
-                <input type="hidden" name="first_publish_year" value="{{ book.first_publish_year|default:'' }}">
-                <input type="hidden" name="cover_i" value="{{ book.cover_i|default:'' }}">
-                <input type="hidden" name="description" value="{{ book.description|default:'' }}">
-                <button type="submit" class="add-button">
-                    Добавить в список
-                </button>
-            </form>
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                {% if book.cover_i %}
+                <img src="https://covers.openlibrary.org/b/id/{{ book.cover_i }}-M.jpg" class="card-img-top" alt="{{ book.title }}" loading="lazy">
+                {% else %}
+                <div class="card-img-top bg-light text-center py-4">
+                    <i class="fas fa-book fa-3x text-muted"></i>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ book.title }}</h5>
+                    {% if book.author_name %}
+                    <p class="card-text">
+                        <small class="text-muted">
+                            {{ book.author_name.0 }}
+                            {% if book.author_name|length > 1 %}
+                            и др.
+                            {% endif %}
+                        </small>
+                    </p>
+                    {% endif %}
+                    {% if book.first_publish_year %}
+                    <p class="card-text"><small class="text-muted">Год первой публикации: {{ book.first_publish_year }}</small></p>
+                    {% endif %}
+                    {% if book.editions %}
+                    <p class="card-text">
+                        <small class="text-muted">
+                            Доступные издания:
+                            {% for edition in book.editions %}
+                                {% if edition.language %}
+                                <br>
+                                - {% for lang in edition.language %}
+                                    {{ lang|get_language_name }}{% if not forloop.last %}, {% endif %}
+                                  {% endfor %}
+                                {% if edition.publish_year %}
+                                    ({{ edition.publish_year.0 }})
+                                {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        </small>
+                    </p>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                    <form method="post" action="{% url 'books:add_from_openlibrary' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="title" value="{{ book.title }}">
+                        <input type="hidden" name="author" value="{{ book.author_name.0|default:'Неизвестен' }}">
+                        {% if book.first_publish_year %}
+                        <input type="hidden" name="first_publish_year" value="{{ book.first_publish_year }}">
+                        {% endif %}
+                        {% if book.cover_i %}
+                        <input type="hidden" name="cover_i" value="{{ book.cover_i }}">
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="fas fa-plus"></i> Добавить в библиотеку
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
         {% endfor %}
     </div>
 
-    {% if results.has_other_pages %}
-    <div class="pagination">
-        {% if results.has_previous %}
-        <a href="?title={{ query }}&page={{ results.previous_page_number }}">← Назад</a>
-        {% endif %}
+    {% if results.paginator.num_pages > 1 %}
+    <nav aria-label="Навигация по страницам" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if results.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?q={{ query }}&language={{ selected_language }}&page={{ results.previous_page_number }}">Предыдущая</a>
+            </li>
+            {% endif %}
 
-        <span>Страница {{ results.number }} из {{ results.paginator.num_pages }}</span>
+            {% for num in results.paginator.page_range %}
+                {% if results.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > results.number|add:'-3' and num < results.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?q={{ query }}&language={{ selected_language }}&page={{ num }}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
 
-        {% if results.has_next %}
-        <a href="?title={{ query }}&page={{ results.next_page_number }}">Вперёд →</a>
-        {% endif %}
-    </div>
+            {% if results.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?q={{ query }}&language={{ selected_language }}&page={{ results.next_page_number }}">Следующая</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
     {% endif %}
-
-    {% elif form.is_bound %}
-    <div class="no-results">
-        <p>По вашему запросу в Open Library ничего не найдено.</p>
-        <div class="manual-add">
-            <p>Хотите добавить книгу вручную?</p>
-            <a href="{% url 'books:add_book' %}" class="add-button">
-                Добавить книгу самостоятельно
-            </a>
-        </div>
-    </div>
     {% endif %}
 </div>
 {% endblock %} 

@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-&lla3tf610^)s+!890xrkwe+^f+-$q(r$ovv3e@1nwd-dv7ssh'
+SECRET_KEY = 'django-insecure-your-secret-key'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'main_admin.apps.MainAdminConfig',  # Наше основное приложение
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -40,9 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Ваши приложения
-    'main_admin.apps.MainAdminConfig',
-    'users.apps.UsersConfig',
     'books.apps.BooksConfig',
+    'users.apps.UsersConfig',
     'recommendations.apps.RecommendationsConfig',
 
     # Сторонние приложения
@@ -67,10 +67,8 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'main_admin/templates'),
-            os.path.join(BASE_DIR, 'books/templates'),
-            os.path.join(BASE_DIR, 'users/templates'),
-            os.path.join(BASE_DIR, 'recommendations/templates'),
+            os.path.join(BASE_DIR, 'main_admin', 'templates'),
+            os.path.join(BASE_DIR, 'books', 'templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -79,7 +77,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'main_admin.context_processors.admin_stats',
             ],
         },
     },
@@ -105,9 +102,15 @@ DATABASES = {
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'OPTIONS': {
+            'user_attributes': ('username', 'email'),
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -116,6 +119,14 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# Сообщения об ошибках валидации паролей на русском
+AUTH_PASSWORD_VALIDATORS_MESSAGES = {
+    'UserAttributeSimilarityValidator': 'Пароль слишком похож на имя пользователя или email.',
+    'MinimumLengthValidator': 'Пароль должен содержать как минимум 8 символов.',
+    'CommonPasswordValidator': 'Этот пароль слишком простой.',
+    'NumericPasswordValidator': 'Пароль не может состоять только из цифр.',
+}
 
 
 # Internationalization
@@ -133,10 +144,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'main_admin/static'),
+    os.path.join(BASE_DIR, 'static'),
 ]
 
 # Media files
@@ -152,10 +163,22 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 # Настройки аутентификации
-LOGIN_REDIRECT_URL = 'home'  # После успешного входа
-LOGOUT_REDIRECT_URL = 'home'  # После выхода
-LOGIN_URL = 'users:login'  # Страница входа для @login_required
+AUTHENTICATION_BACKENDS = [
+    'users.backends.EmailOrUsernameModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
-# Настройки сессий
+# Настройки для входа/выхода
+LOGIN_URL = 'users:login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'
+
+# Настройки сессий и безопасности
 SESSION_COOKIE_AGE = 1209600  # 2 недели в секундах
-SESSION_COOKIE_SECURE = False  # Установите True в продакшене
+SESSION_COOKIE_SECURE = True  # Использовать только HTTPS
+CSRF_COOKIE_SECURE = True
+
+# Admin site settings
+ADMIN_SITE_HEADER = "Библиотека - Административная панель"
+ADMIN_SITE_TITLE = "Библиотека"
+ADMIN_INDEX_TITLE = "Управление библиотекой"

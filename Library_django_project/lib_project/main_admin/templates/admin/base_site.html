@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">Библиотека - Административная панель</a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block extrastyle %}
+<style>
+    :root {
+        --primary: #013220;
+        --secondary: #4c2a2a;
+    }
+
+    #header {
+        background: var(--primary);
+        color: #fff;
+    }
+    
+    #header a:link, #header a:visited {
+        color: #fff;
+    }
+
+    div.breadcrumbs {
+        background: var(--secondary);
+    }
+
+    .module h2, .module caption, .inline-group h2 {
+        background: var(--secondary);
+    }
+
+    .button, input[type=submit], input[type=button], .submit-row input, a.button {
+        background: var(--primary);
+    }
+
+    .button:hover, input[type=submit]:hover, input[type=button]:hover {
+        background: var(--secondary);
+    }
+
+    .button.default, input[type=submit].default, .submit-row input.default {
+        background: var(--primary);
+    }
+
+    .button.default:hover, input[type=submit].default:hover {
+        background: var(--secondary);
+    }
+</style>
+{% endblock %} 

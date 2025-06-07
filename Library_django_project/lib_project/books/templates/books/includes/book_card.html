@@ -1,0 +1,54 @@
+<div class="card h-100">
+    {% if book.cover %}
+        <img src="{{ book.cover.url }}" class="card-img-top" alt="{{ book.title }}" style="height: 300px; object-fit: contain;">
+    {% else %}
+        <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 300px;">
+            <span class="text-muted">Нет обложки</span>
+        </div>
+    {% endif %}
+    
+    <div class="card-body">
+        <h5 class="card-title">{{ book.title }}</h5>
+        {% if book.authors.all %}
+            <p class="card-text">
+                <small class="text-muted">
+                    {% for author in book.authors.all %}
+                        {{ author.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </small>
+            </p>
+        {% endif %}
+        
+        {% if book.description %}
+            <p class="card-text">
+                {{ book.description|truncatewords:30 }}
+            </p>
+        {% endif %}
+        
+        <div class="mt-2">
+            {% if book.genre %}
+                <p class="card-text">
+                    <small class="text-muted">
+                        Жанр: {{ book.get_genre_display }}
+                    </small>
+                </p>
+            {% endif %}
+            
+            {% if book.published_date %}
+                <p class="card-text">
+                    <small class="text-muted">
+                        Год издания: {{ book.published_date|date:"Y" }}
+                    </small>
+                </p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="card-footer">
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{% url 'books:detail' book.id %}" class="btn btn-sm btn-primary">
+                Подробнее
+            </a>
+        </div>
+    </div>
+</div> 

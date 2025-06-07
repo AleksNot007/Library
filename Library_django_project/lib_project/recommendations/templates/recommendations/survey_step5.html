@@ -1,0 +1,84 @@
+{% extends 'recommendations/survey_base.html' %}
+
+{% block step_content %}
+<h2 class="mb-4">Выберите любимых авторов</h2>
+<p class="text-muted mb-4">Отметьте авторов, чьи книги вам нравятся</p>
+
+<form id="authorsForm" class="needs-validation" novalidate>
+    {% csrf_token %}
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" id="authorSearch" 
+                       placeholder="Поиск автора..." aria-label="Поиск автора">
+            </div>
+        </div>
+        
+        <div class="col-12">
+            <div class="authors-list" style="max-height: 400px; overflow-y: auto;">
+                {% for author in authors %}
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="favorite_authors" 
+                           value="{{ author.id }}" id="author_{{ author.id }}">
+                    <label class="form-check-label" for="author_{{ author.id }}">
+                        {{ author.name }}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+        <button type="button" class="btn btn-outline-secondary" onclick="navigateToStep(4)">
+            <i class="bi bi-arrow-left me-2"></i>
+            Назад
+        </button>
+        <button type="submit" class="btn btn-primary">
+            Далее
+            <i class="bi bi-arrow-right ms-2"></i>
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block step_js %}
+<script>
+    const authorSearch = document.getElementById('authorSearch');
+    const authorsList = document.querySelector('.authors-list');
+    
+    // Функция для фильтрации авторов
+    function filterAuthors(query) {
+        const authors = authorsList.querySelectorAll('.form-check');
+        query = query.toLowerCase();
+        
+        authors.forEach(author => {
+            const name = author.querySelector('label').textContent.toLowerCase();
+            if (name.includes(query)) {
+                author.style.display = '';
+            } else {
+                author.style.display = 'none';
+            }
+        });
+    }
+    
+    // Обработчик поиска
+    authorSearch.addEventListener('input', (e) => {
+        filterAuthors(e.target.value);
+    });
+    
+    // Обработчик отправки формы
+    document.getElementById('authorsForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const selectedAuthors = document.querySelectorAll('input[name="favorite_authors"]:checked');
+        if (selectedAuthors.length === 0) {
+            alert('Пожалуйста, выберите хотя бы одного автора');
+            return;
+        }
+
+        const formData = new FormData(this);
+        saveAndContinue(formData, 5);
+    });
+</script>
+{% endblock %} 

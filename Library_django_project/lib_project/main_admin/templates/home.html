@@ -67,28 +67,38 @@
     <!-- Рекомендации -->
     <h2 class="section-title">РЕКОМЕНДАЦИИ ДЛЯ ВАС</h2>
     {% if user.is_authenticated %}
-        <div class="books-grid">
-            {% for book in recommended_books %}
-                <div class="book-card">
-                    {% if book.cover %}
-                        <div class="book-cover" style="background-image: url('{{ book.cover.url }}');"></div>
-                    {% else %}
-                        <div class="book-cover" style="background-image: url('/static/images/default-cover.jpg');"></div>
-                    {% endif %}
-                    <div class="book-title">{{ book.title }}</div>
-                    <div class="book-author">
-                        {% for author in book.authors.all %}
-                            {{ author.name }}{% if not forloop.last %}, {% endif %}
-                        {% endfor %}
+        {% if has_survey %}
+            <div class="books-grid">
+                {% for book in recommended_books %}
+                    <div class="book-card">
+                        {% if book.cover %}
+                            <div class="book-cover" style="background-image: url('{{ book.cover.url }}');"></div>
+                        {% else %}
+                            <div class="book-cover" style="background-image: url('/static/images/default-cover.jpg');"></div>
+                        {% endif %}
+                        <div class="book-title">{{ book.title }}</div>
+                        <div class="book-author">
+                            {% for author in book.authors.all %}
+                                {{ author.name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="book-actions">
+                            <a href="{% url 'books:detail' book.id %}"><button>Читать</button></a>
+                        </div>
                     </div>
-                    <div class="book-actions">
-                        <a href="{% url 'books:detail' book.id %}"><button>Читать</button></a>
+                {% empty %}
+                    <div class="alert alert-info">
+                        На основе ваших предпочтений мы пока не можем подобрать рекомендации. 
+                        Попробуйте добавить больше любимых книг или авторов в вашем профиле.
                     </div>
-                </div>
-            {% empty %}
-                <p>Начните читать книги, чтобы получать персональные рекомендации.</p>
-            {% endfor %}
-        </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <p>Пройдите короткий опрос, чтобы получать персонализированные рекомендации книг!</p>
+                <a href="{% url 'recommendations:survey' %}" class="btn btn-primary mt-3">Пройти опрос</a>
+            </div>
+        {% endif %}
     {% else %}
         <p class="login-prompt">Войдите в систему, чтобы получать персональные рекомендации.</p>
         <a href="{% url 'users:login' %}" class="cta-button">Войти</a>

@@ -3,6 +3,8 @@ from django.urls import path
 from django.db.models import Count
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.contrib import messages
+from django.contrib.auth.admin import UserAdmin
 from .models import Book, Author, Review, UserBookRelation, Quote, GlobalCollection
 from . import views
 
@@ -34,34 +36,71 @@ class LibraryAdminSite(admin.AdminSite):
             'user_count': User.objects.count(),
             'author_count': Author.objects.count(),
             'review_count': Review.objects.count(),
+            'waiting_books': Book.objects.filter(needs_moderation=True).count(),
             'today': today,
         })
         
         return super().index(request, extra_context)
 
 # Создаем экземпляр кастомного AdminSite
-admin_site = LibraryAdminSite(name='library_admin')
+admin_site = LibraryAdminSite(name='admin')  # Изменяем name на 'admin'
+
+# Получаем модель User
+User = get_user_model()
 
 class BookAdmin(admin.ModelAdmin):
-    list_display = ('title', 'display_authors', 'genre', 'total_users_added')
+    list_display = ('title', 'display_authors', 'genre', 'is_approved', 'needs_moderation', 'submitted_by', 'submission_date')
+    list_filter = ('genre', 'is_approved', 'needs_moderation')
     search_fields = ('title', 'authors__name', 'genre')
-    list_filter = ('genre',)
+    actions = ['approve_books', 'reject_books']
+    readonly_fields = ('submitted_by', 'submission_date')
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('title', 'authors', 'genre', 'description', 'published_date', 'cover')
+        }),
+        ('Статус модерации', {
+            'fields': ('is_approved', 'needs_moderation', 'submitted_by', 'submission_date'),
+            'classes': ('collapse',)
+        }),
+    )
 
     def get_queryset(self, request):
-        return super().get_queryset(request)
+        return super().get_queryset(request).select_related('submitted_by')
 
     def display_authors(self, obj):
         return ", ".join(author.name for author in obj.authors.all())
     display_authors.short_description = 'Авторы'
 
-    def total_users_added(self, obj):
-        return obj.user_relations.count()
-    total_users_added.short_description = 'Добавлено пользователями'
+    def submission_date(self, obj):
+        return obj.created_at
+    submission_date.short_description = 'Дата добавления'
+
+    def approve_books(self, request, queryset):
+        updated = queryset.update(is_approved=True, needs_moderation=False)
+        self.message_user(request, f'Одобрено {updated} книг.')
+    approve_books.short_description = 'Одобрить выбранные книги'
+
+    def reject_books(self, request, queryset):
+        updated = queryset.update(is_approved=False, needs_moderation=False)
+        self.message_user(
+            request, 
+            f'Отклонено {updated} книг. Пользователи получат уведомление о необходимости проверить данные.',
+            messages.WARNING
+        )
+    reject_books.short_description = 'Отклонить выбранные книги'
 
     def changelist_view(self, request, extra_context=None):
         if not extra_context:
             extra_context = {}
-        extra_context['total_books'] = Book.objects.count()
+        
+        # Добавляем статистику по книгам
+        extra_context.update({
+            'total_books': Book.objects.count(),
+            'waiting_books': Book.objects.filter(needs_moderation=True).count(),
+            'approved_books': Book.objects.filter(is_approved=True).count(),
+            'rejected_books': Book.objects.filter(is_approved=False, needs_moderation=False).count(),
+        })
+        
         return super().changelist_view(request, extra_context=extra_context)
 
 class AuthorAdmin(admin.ModelAdmin):

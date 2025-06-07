@@ -1,192 +1,135 @@
 {% extends "admin/base_site.html" %}
-{% load i18n %}
+{% load i18n static %}
 
 {% block title %}Статистика сайта | Административная панель{% endblock %}
 
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        padding: 1rem;
+    }
+
+    .stats-section {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+    }
+
+    .stats-section h2 {
+        color: #333;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #eee;
+    }
+
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f5f5f5;
+    }
+
+    .stat-item:last-child {
+        border-bottom: none;
+    }
+
+    .stat-label {
+        color: #666;
+    }
+
+    .stat-value {
+        font-weight: bold;
+        color: #333;
+    }
+
+    .stat-value.positive {
+        color: #28a745;
+    }
+
+    .stat-value.warning {
+        color: #ffc107;
+    }
+
+    .stat-value.danger {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div id="content-main">
-    <h1>Статистика сайта</h1>
-    
-    <!-- Статистика пользователей -->
-    <div class="module">
-        <h2>Пользователи</h2>
-        <div class="stats-section">
-            <table>
-                <tr>
-                    <th>Всего пользователей:</th>
-                    <td>{{ total_users }}</td>
-                </tr>
-                <tr>
-                    <th>Активные пользователи:</th>
-                    <td>{{ active_users }}</td>
-                </tr>
-                <tr>
-                    <th>Персонал сайта:</th>
-                    <td>{{ staff_users }}</td>
-                </tr>
-                <tr>
-                    <th>Администраторы:</th>
-                    <td>{{ superusers }}</td>
-                </tr>
-            </table>
+<div class="stats-container">
+    <!-- Статистика по книгам -->
+    <div class="stats-section">
+        <h2>📚 Книги</h2>
+        <div class="stat-item">
+            <span class="stat-label">Всего книг:</span>
+            <span class="stat-value">{{ book_stats.total }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Одобренные:</span>
+            <span class="stat-value positive">{{ book_stats.approved }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">На рассмотрении:</span>
+            <span class="stat-value warning">{{ book_stats.waiting }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Отклоненные:</span>
+            <span class="stat-value danger">{{ book_stats.rejected }}</span>
         </div>
     </div>
 
-    <!-- Статистика контента -->
-    <div class="module">
-        <h2>Контент</h2>
-        <div class="stats-section">
-            <table>
-                <tr>
-                    <th>Всего книг:</th>
-                    <td>{{ total_books }}</td>
-                </tr>
-                <tr>
-                    <th>Всего авторов:</th>
-                    <td>{{ total_authors }}</td>
-                </tr>
-                <tr>
-                    <th>Всего отзывов:</th>
-                    <td>{{ total_reviews }}</td>
-                </tr>
-                <tr>
-                    <th>Всего цитат:</th>
-                    <td>{{ total_quotes }}</td>
-                </tr>
-            </table>
+    <!-- Статистика по пользователям -->
+    <div class="stats-section">
+        <h2>👥 Пользователи</h2>
+        <div class="stat-item">
+            <span class="stat-label">Всего пользователей:</span>
+            <span class="stat-value">{{ user_stats.total }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Активные:</span>
+            <span class="stat-value positive">{{ user_stats.active }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Администраторы:</span>
+            <span class="stat-value">{{ user_stats.staff }}</span>
         </div>
     </div>
 
-    <!-- Статистика активности -->
-    <div class="module">
-        <h2>Активность пользователей</h2>
-        <div class="stats-section">
-            <table>
-                <tr>
-                    <th>Пользователей с книгами:</th>
-                    <td>{{ users_with_books }}</td>
-                </tr>
-                <tr>
-                    <th>Пользователей с отзывами:</th>
-                    <td>{{ users_with_reviews }}</td>
-                </tr>
-                <tr>
-                    <th>Пользователей с цитатами:</th>
-                    <td>{{ users_with_quotes }}</td>
-                </tr>
-            </table>
+    <!-- Статистика по отзывам -->
+    <div class="stats-section">
+        <h2>💬 Отзывы</h2>
+        <div class="stat-item">
+            <span class="stat-label">Всего отзывов:</span>
+            <span class="stat-value">{{ review_stats.total }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Отзывов сегодня:</span>
+            <span class="stat-value">{{ review_stats.today }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Средняя оценка:</span>
+            <span class="stat-value">{{ review_stats.avg_rating|floatformat:1 }}</span>
         </div>
     </div>
 
-    <!-- Средние показатели -->
-    <div class="module">
-        <h2>Средние показатели</h2>
-        <div class="stats-section">
-            <table>
-                <tr>
-                    <th>Среднее количество книг на пользователя:</th>
-                    <td>{{ avg_books_per_user|floatformat:1 }}</td>
-                </tr>
-                <tr>
-                    <th>Среднее количество отзывов на пользователя:</th>
-                    <td>{{ avg_reviews_per_user|floatformat:1 }}</td>
-                </tr>
-                <tr>
-                    <th>Среднее количество цитат на пользователя:</th>
-                    <td>{{ avg_quotes_per_user|floatformat:1 }}</td>
-                </tr>
-            </table>
+    <!-- Статистика по авторам -->
+    <div class="stats-section">
+        <h2>✍️ Авторы</h2>
+        <div class="stat-item">
+            <span class="stat-label">Всего авторов:</span>
+            <span class="stat-value">{{ author_stats.total }}</span>
         </div>
-    </div>
-
-    <!-- Статистика по спискам -->
-    <div class="module">
-        <h2>Списки книг</h2>
-        <div class="stats-section">
-            <table>
-                {% for list in reading_lists %}
-                <tr>
-                    <th>{{ list.list_type }}:</th>
-                    <td>{{ list.count }}</td>
-                </tr>
-                {% endfor %}
-            </table>
-        </div>
-    </div>
-
-    <!-- Топ книг -->
-    <div class="module">
-        <h2>Топ-5 книг по отзывам</h2>
-        <div class="stats-section">
-            <table>
-                {% for book in top_reviewed_books %}
-                <tr>
-                    <th>{{ book.title }}</th>
-                    <td>{{ book.reviews_count }} отзывов</td>
-                </tr>
-                {% endfor %}
-            </table>
-        </div>
-    </div>
-
-    <div class="module">
-        <h2>Топ-5 цитируемых книг</h2>
-        <div class="stats-section">
-            <table>
-                {% for book in top_quoted_books %}
-                <tr>
-                    <th>{{ book.title }}</th>
-                    <td>{{ book.quotes_count }} цитат</td>
-                </tr>
-                {% endfor %}
-            </table>
+        <div class="stat-item">
+            <span class="stat-label">Авторы с книгами:</span>
+            <span class="stat-value">{{ author_stats.with_books }}</span>
         </div>
     </div>
 </div>
-
-<!-- Стили для страницы статистики -->
-<style>
-    .module {
-        margin-bottom: 20px;
-        padding: 10px;
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-    }
-    
-    .module h2 {
-        background: #79aec8;
-        color: #fff;
-        padding: 8px;
-        margin: -10px -10px 10px -10px;
-        border-radius: 4px 4px 0 0;
-    }
-    
-    .stats-section {
-        padding: 10px;
-    }
-    
-    .stats-section table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    
-    .stats-section th,
-    .stats-section td {
-        padding: 8px;
-        border-bottom: 1px solid #eee;
-        text-align: left;
-    }
-    
-    .stats-section th {
-        width: 70%;
-        color: #666;
-    }
-    
-    .stats-section td {
-        width: 30%;
-        font-weight: bold;
-        color: #417690;
-    }
-</style>
 {% endblock %} 

@@ -2,6 +2,49 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models import Avg
+from django.utils import timezone
+import json
+from django.urls import reverse
+from django.contrib.auth import get_user_model
+
+
+# ----------------------------
+# Модель жанра
+# ----------------------------
+class Genre(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Название жанра")
+    description = models.TextField(blank=True, verbose_name="Описание жанра")
+    slug = models.SlugField(max_length=100, unique=True, verbose_name="URL-идентификатор")
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='subgenres',
+        verbose_name="Родительский жанр"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+
+    class Meta:
+        verbose_name = "Жанр"
+        verbose_name_plural = "Жанры"
+        ordering = ['name']
+
+    def __str__(self):
+        if self.parent:
+            return f"{self.parent.name} - {self.name}"
+        return self.name
+
+    @property
+    def books_count(self):
+        """Количество книг в жанре"""
+        return self.books.count()
+
+    @property
+    def all_subgenres(self):
+        """Получить все подчиненные жанры"""
+        return self.subgenres.all()
 
 
 # ----------------------------
@@ -41,6 +84,7 @@ class Book(models.Model):
         ("comics", "Комиксы и графические романы"),
         ("children", "Детям"),
         ("audio", "Аудиокнига"),
+        ("drama", "Драма"),
         ("other", "Другое")
     ]
 
@@ -52,6 +96,9 @@ class Book(models.Model):
     published_date = models.DateField(blank=True, null=True, verbose_name="Дата издания")
     world_rating = models.FloatField(blank=True, null=True, verbose_name="Мировой рейтинг")
     is_approved = models.BooleanField(default=False, verbose_name="Одобрено модератором")
+    needs_moderation = models.BooleanField(default=True, verbose_name="Требует проверки модератором",
+        help_text='Отметьте, если книга требует дополнительной проверки из-за неполных данных')
+    moderation_notes = models.TextField(blank=True, verbose_name="Заметки модератора")
     submitted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -60,6 +107,13 @@ class Book(models.Model):
         verbose_name="Добавил пользователь",
         related_name="submitted_books"
     )
+    
+    # Поля для интеграции с OpenLibrary API
+    openlibrary_id = models.CharField(max_length=100, blank=True, verbose_name="ID в OpenLibrary")
+    
+    # Метаданные
+    created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата добавления")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
 
     def __str__(self):
         return self.title
@@ -74,6 +128,38 @@ class Book(models.Model):
     @property
     def all_reviews(self):
         return self.reviews.all()
+
+    @property
+    def average_rating(self):
+        """Средний рейтинг книги"""
+        return self.reviews.aggregate(Avg('rating'))['rating__avg']
+
+    @property
+    def reading_count(self):
+        """Количество читающих сейчас"""
+        return self.user_relations.filter(list_type='in_progress').count()
+
+    @property
+    def finished_count(self):
+        """Количество прочитавших"""
+        return self.user_relations.filter(list_type='read').count()
+
+    @property
+    def want_to_read_count(self):
+        """Количество желающих прочитать"""
+        return self.user_relations.filter(list_type='want').count()
+
+    @property
+    def is_complete(self):
+        """Проверяет, заполнены ли все основные поля книги"""
+        return all([
+            self.title,
+            self.authors.exists(),
+            self.description,
+            self.published_date,
+            self.cover,
+            self.genre
+        ])
 
 
 # ----------------------------
@@ -97,6 +183,7 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.book.title} ({self.rating})"
+
 # ----------------------------
 # Определение типов личных списков (коллекций)
 # ----------------------------
@@ -196,3 +283,44 @@ def add_book_from_openlibrary(request):
         # Обработка результатов и создание книги
         return redirect('books:book_list')
     return render(request, 'books/add_book.html')
+
+class Collection(models.Model):
+    """Модель для подборок книг"""
+    COLLECTION_TYPES = [
+        ('custom', 'Пользовательская'),
+        ('genre', 'По жанру'),
+        ('author', 'По автору'),
+        ('theme', 'Тематическая'),
+        ('period', 'По периоду'),
+    ]
+
+    title = models.CharField('Название', max_length=200)
+    description = models.TextField('Описание', blank=True)
+    type = models.CharField('Тип подборки', max_length=20, choices=COLLECTION_TYPES, default='custom')
+    slug = models.SlugField('URL', unique=True)
+    cover = models.ImageField('Обложка', upload_to='collection_covers/', blank=True, null=True)
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    updated_at = models.DateTimeField('Дата обновления', auto_now=True)
+    created_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, related_name='collections')
+    books = models.ManyToManyField(Book, related_name='collections', verbose_name='Книги')
+    is_public = models.BooleanField('Публичная', default=True)
+    featured = models.BooleanField('Избранная', default=False)
+    views_count = models.PositiveIntegerField('Просмотры', default=0)
+
+    class Meta:
+        verbose_name = 'Подборка'
+        verbose_name_plural = 'Подборки'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+    def get_absolute_url(self):
+        return reverse('books:collection_detail', kwargs={'slug': self.slug})
+
+    def get_books_count(self):
+        return self.books.count()
+
+    def increment_views(self):
+        self.views_count += 1
+        self.save()

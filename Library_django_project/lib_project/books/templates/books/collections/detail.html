@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} — Личная библиотека{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'books:collections_list' %}">Подборки</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">{{ title }}</h1>
+
+    {% if books %}
+    <div class="row">
+        {% for book in books %}
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                {% if book.cover %}
+                <img src="{{ book.cover.url }}" class="card-img-top" alt="{{ book.title }}" style="height: 300px; object-fit: cover;">
+                {% else %}
+                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
+                    <i class="fas fa-book fa-3x text-muted"></i>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <a href="{% url 'books:detail' book.id %}" class="text-decoration-none text-dark">
+                            {{ book.title }}
+                        </a>
+                    </h5>
+                    <p class="card-text">
+                        {% for author in book.authors.all %}
+                        {{ author.name }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
+                    
+                    {% if collection_type == 'top_rated' %}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-success">
+                            <i class="fas fa-star"></i> {{ book.avg_rating|floatformat:1 }}
+                        </span>
+                        <small class="text-muted">{{ book.reviews_count }} отзывов</small>
+                    </div>
+                    {% elif collection_type == 'popular' %}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-primary">
+                            <i class="fas fa-users"></i> {{ book.readers_count }}
+                        </span>
+                        <small class="text-muted">читателей</small>
+                    </div>
+                    {% elif collection_type == 'most_added' %}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-info">
+                            <i class="fas fa-plus"></i> {{ book.total_adds }}
+                        </span>
+                        <small class="text-muted">добавлений</small>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if user.is_authenticated %}
+                <div class="card-footer bg-transparent">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary btn-sm add-to-list" data-book-id="{{ book.id }}" data-list-type="want">
+                            <i class="fas fa-bookmark"></i> Хочу прочесть
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm add-to-list" data-book-id="{{ book.id }}" data-list-type="read">
+                            <i class="fas fa-check"></i> Прочитано
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if books.paginator.num_pages > 1 %}
+    <nav aria-label="Навигация по страницам" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if books.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ books.previous_page_number }}">Предыдущая</a>
+            </li>
+            {% endif %}
+
+            {% for num in books.paginator.page_range %}
+                {% if books.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > books.number|add:'-3' and num < books.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if books.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ books.next_page_number }}">Следующая</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="alert alert-info">
+        <h4 class="alert-heading">Нет книг в этой подборке</h4>
+        <p>К сожалению, в данный момент в этой подборке нет книг.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% if user.is_authenticated %}
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('.add-to-list').click(function() {
+        var bookId = $(this).data('book-id');
+        var listType = $(this).data('list-type');
+        var button = $(this);
+        
+        $.ajax({
+            url: '/books/' + bookId + '/add-to-list/' + listType + '/',
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                // Обновляем состояние кнопки
+                button.toggleClass('active');
+                // Показываем уведомление
+                alert(response.message);
+            },
+            error: function(xhr) {
+                alert('Произошла ошибка. Пожалуйста, попробуйте позже.');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endif %}
+{% endblock %} 

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Моя библиотека{% endblock %}
+{% block title %}Моя библиотека — Личная библиотека{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -89,6 +89,7 @@
         background: #eee;
         margin: 0 auto 15px;
         border-radius: 4px;
+        object-fit: cover;
     }
 
     .book-title {
@@ -111,62 +112,101 @@
         text-decoration: none;
         display: inline-block;
     }
+
+    .empty-list {
+        text-align: center;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        margin-bottom: 30px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<h1 class="page-title">Моя библиотека</h1>
+<div class="container mt-4">
+    <h2>Моя библиотека</h2>
 
-<div class="library-tabs">
-    <a href="#">Моя библиотека</a>
-    <a href="#">Мои рецензии</a>
-    <a href="#">Мои цитаты</a>
-    <a href="#">Черный список</a>
-</div>
-
-<div class="library-container">
-    <h2 class="section-title">Управляйте своими книгами</h2>
-
-    <!-- Прочитанные книги -->
-    <h3>Прочитанные книги</h3>
-    <div class="books-grid">
-        {% for relation in finished %}
-        <div class="book-card">
-            {% if relation.book.cover %}
-                <img src="{{ relation.book.cover.url }}" alt="{{ relation.book.title }}" class="book-cover">
-            {% else %}
-                <div class="book-cover"></div>
-            {% endif %}
-            <div class="book-title">{{ relation.book.title }}</div>
-            <div class="book-author">
-                {% for author in relation.book.authors.all %}
-                    {{ author.name }}{% if not forloop.last %}, {% endif %}
-                {% endfor %}
-            </div>
-            <a href="{% url 'books:detail' relation.book.id %}" class="btn">Подробнее</a>
+    {% if rejected_books %}
+    <div class="mb-4">
+        <h4>Уведомления</h4>
+        {% for book in rejected_books %}
+        <div class="alert alert-warning">
+            <p class="mb-2">
+                Книга "{{ book.title }}" не прошла проверку модератора.
+            </p>
+            <p class="mb-0">
+                Пожалуйста, проверьте правильность введенных данных и 
+                <a href="{% url 'books:add_book' %}" class="alert-link">попробуйте добавить её снова</a>.
+            </p>
         </div>
         {% endfor %}
     </div>
+    {% endif %}
 
-    <!-- Хочу прочитать -->
-    <h3>Хочу прочитать</h3>
-    <div class="books-grid">
-        {% for relation in want_to_read %}
-        <div class="book-card">
-            {% if relation.book.cover %}
-                <img src="{{ relation.book.cover.url }}" alt="{{ relation.book.title }}" class="book-cover">
-            {% else %}
-                <div class="book-cover"></div>
-            {% endif %}
-            <div class="book-title">{{ relation.book.title }}</div>
-            <div class="book-author">
-                {% for author in relation.book.authors.all %}
-                    {{ author.name }}{% if not forloop.last %}, {% endif %}
-                {% endfor %}
-            </div>
-            <a href="{% url 'books:detail' relation.book.id %}" class="btn">Начать</a>
+    {% if reading_now %}
+    <div class="mb-4">
+        <h3>Читаю сейчас</h3>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for relation in reading_now %}
+                {% include 'books/includes/book_card.html' with book=relation.book %}
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
+    {% endif %}
+
+    {% if want_to_read %}
+    <div class="mb-4">
+        <h3>Хочу прочитать</h3>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for relation in want_to_read %}
+                {% include 'books/includes/book_card.html' with book=relation.book %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if finished %}
+    <div class="mb-4">
+        <h3>Прочитанные</h3>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for relation in finished %}
+                {% include 'books/includes/book_card.html' with book=relation.book %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if favorites %}
+    <div class="mb-4">
+        <h3>Избранное</h3>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for relation in favorites %}
+                {% include 'books/includes/book_card.html' with book=relation.book %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if blacklist %}
+    <div class="mb-4">
+        <h3>Черный список</h3>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for relation in blacklist %}
+                {% include 'books/includes/book_card.html' with book=relation.book %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not reading_now and not want_to_read and not finished and not favorites and not blacklist %}
+    <div class="alert alert-info">
+        <p>В вашей библиотеке пока нет книг.</p>
+        <p class="mb-0">
+            Начните с <a href="{% url 'books:catalog' %}" class="alert-link">каталога</a> 
+            или <a href="{% url 'books:search' %}" class="alert-link">поиска книг</a>.
+        </p>
+    </div>
+    {% endif %}
 </div>
 {% endblock %} 

@@ -1,0 +1,51 @@
+{% extends 'recommendations/survey_base.html' %}
+
+{% block step_content %}
+<h2 class="mb-4">Как часто вы читаете?</h2>
+<p class="text-muted mb-4">Выберите, сколько книг в среднем вы читаете в месяц</p>
+
+<form id="readingFrequencyForm" class="needs-validation" novalidate>
+    {% csrf_token %}
+    <div class="row g-3">
+        {% for value, label in reading_frequencies %}
+        <div class="col-12">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="reading_frequency" 
+                       value="{{ value }}" id="frequency_{{ value }}" required>
+                <label class="form-check-label" for="frequency_{{ value }}">
+                    {{ label }}
+                </label>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+        <button type="button" class="btn btn-outline-secondary" onclick="navigateToStep(3)">
+            <i class="bi bi-arrow-left me-2"></i>
+            Назад
+        </button>
+        <button type="submit" class="btn btn-primary">
+            Далее
+            <i class="bi bi-arrow-right ms-2"></i>
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block step_js %}
+<script>
+    document.getElementById('readingFrequencyForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const selectedFrequency = document.querySelector('input[name="reading_frequency"]:checked');
+        if (!selectedFrequency) {
+            alert('Пожалуйста, выберите частоту чтения');
+            return;
+        }
+
+        const formData = new FormData(this);
+        saveAndContinue(formData, 4);
+    });
+</script>
+{% endblock %} 

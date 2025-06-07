@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load rec_tags %}
+
+{% block title %}Опрос читательских предпочтений - Шаг {{ step }} из 6{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="progress mb-4">
+        <div class="progress-bar" role="progressbar" style="width: {{ step|multiply:16.67 }}%" aria-valuenow="{{ step }}" aria-valuemin="0" aria-valuemax="6"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">Шаг {{ step }} из 6</h4>
+        </div>
+        <div class="card-body">
+            {% block step_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Общие функции для всех шагов
+    function navigateToStep(step) {
+        console.log('Navigating to step:', step);
+        const url = "{% url 'recommendations:survey_step1' %}".replace('step1', 'step' + step);
+        console.log('Navigation URL:', url);
+        window.location.href = url;
+    }
+
+    function saveAndContinue(formData, currentStep) {
+        console.log('Saving step:', currentStep);
+        console.log('Form data:', Object.fromEntries(formData));
+        
+        const saveUrl = "{% url 'recommendations:save_step1' %}".replace('step1', 'step' + currentStep);
+        console.log('Save URL:', saveUrl);
+        
+        fetch(saveUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => {
+            console.log('Save response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Save response data:', data);
+            if (data.success) {
+                if (currentStep < 6) {
+                    navigateToStep(currentStep + 1);
+                } else {
+                    window.location.href = "{% url 'recommendations:survey_complete' %}";
+                }
+            } else {
+                alert(data.error || 'Произошла ошибка при сохранении данных');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при сохранении данных');
+        });
+    }
+</script>
+{% block step_js %}{% endblock %}
+{% endblock %} 

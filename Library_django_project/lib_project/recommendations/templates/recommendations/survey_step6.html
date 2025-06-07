@@ -1,0 +1,89 @@
+{% extends 'recommendations/survey_base.html' %}
+
+{% block step_content %}
+<h2 class="mb-4">Выберите любимые книги</h2>
+<p class="text-muted mb-4">Отметьте книги, которые вам понравились</p>
+
+<form id="booksForm" class="needs-validation" novalidate>
+    {% csrf_token %}
+    
+    {% if genre_books %}
+    <h5 class="mb-3">Книги выбранных жанров:</h5>
+    <div class="row g-3 mb-4">
+        {% for book in genre_books %}
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="favorite_books" 
+                               value="{{ book.id }}" id="book_{{ book.id }}">
+                        <label class="form-check-label" for="book_{{ book.id }}">
+                            <h6 class="card-title mb-1">{{ book.title }}</h6>
+                            <p class="card-text small text-muted mb-0">
+                                {% for author in book.authors.all %}
+                                    {{ author.name }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if author_books %}
+    <h5 class="mb-3">Популярные книги выбранных авторов:</h5>
+    <div class="row g-3 mb-4">
+        {% for book in author_books %}
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="favorite_books" 
+                               value="{{ book.id }}" id="book_{{ book.id }}">
+                        <label class="form-check-label" for="book_{{ book.id }}">
+                            <h6 class="card-title mb-1">{{ book.title }}</h6>
+                            <p class="card-text small text-muted mb-0">
+                                {% for author in book.authors.all %}
+                                    {{ author.name }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not genre_books and not author_books %}
+    <div class="alert alert-info">
+        К сожалению, мы не смогли найти книги на основе ваших предыдущих ответов.
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between mt-4">
+        <button type="button" class="btn btn-outline-secondary" onclick="navigateToStep(5)">
+            <i class="bi bi-arrow-left me-2"></i>
+            Назад
+        </button>
+        <button type="submit" class="btn btn-primary">
+            Завершить
+            <i class="bi bi-check-lg ms-2"></i>
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block step_js %}
+<script>
+    document.getElementById('booksForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        saveAndContinue(formData, 6);
+    });
+</script>
+{% endblock %} 

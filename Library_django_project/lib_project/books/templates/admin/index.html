@@ -1,0 +1,119 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">Статистика библиотеки</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="info-box bg-info">
+                            <div class="info-box-content">
+                                <span class="info-box-text">Всего книг</span>
+                                <span class="info-box-number">{{ book_count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-warning">
+                            <div class="info-box-content">
+                                <span class="info-box-text">Книги на рассмотрении</span>
+                                <span class="info-box-number">{{ waiting_books }}</span>
+                                {% if waiting_books > 0 %}
+                                <a href="{% url 'admin:books_book_changelist' %}?needs_moderation__exact=1" 
+                                   class="small-box-footer">
+                                    Просмотреть список
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-success">
+                            <div class="info-box-content">
+                                <span class="info-box-text">Пользователей</span>
+                                <span class="info-box-number">{{ user_count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-danger">
+                            <div class="info-box-content">
+                                <span class="info-box-text">Отзывов</span>
+                                <span class="info-box-number">{{ review_count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ block.super }}
+
+<style>
+    .info-box {
+        min-height: 100px;
+        background: #fff;
+        width: 100%;
+        box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+        border-radius: 0.25rem;
+        margin-bottom: 1rem;
+        padding: 1rem;
+    }
+    
+    .info-box-content {
+        text-align: center;
+    }
+    
+    .info-box-text {
+        display: block;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .info-box-number {
+        display: block;
+        font-weight: 700;
+        font-size: 1.5rem;
+    }
+    
+    .bg-info {
+        background-color: #17a2b8!important;
+        color: #fff;
+    }
+    
+    .bg-warning {
+        background-color: #ffc107!important;
+        color: #1f2d3d;
+    }
+    
+    .bg-success {
+        background-color: #28a745!important;
+        color: #fff;
+    }
+    
+    .bg-danger {
+        background-color: #dc3545!important;
+        color: #fff;
+    }
+    
+    .small-box-footer {
+        color: #fff;
+        text-decoration: none;
+        padding: 3px 0;
+        display: block;
+        margin-top: 0.5rem;
+    }
+    
+    .small-box-footer:hover {
+        color: #fff;
+        text-decoration: underline;
+    }
+</style>
+{% endblock %} 

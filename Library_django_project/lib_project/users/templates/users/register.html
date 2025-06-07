@@ -3,6 +3,62 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .password-field {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    
+    .errorlist {
+        color: #dc3545;
+        list-style: none;
+        padding: 0;
+        margin-bottom: 1rem;
+    }
+    
+    .field-error {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .password-requirements {
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        padding: 0;
+        list-style: none;
+    }
+
+    .password-requirement {
+        margin-bottom: 0.25rem;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+    }
+
+    .password-requirement i {
+        margin-right: 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .requirement-met {
+        color: #28a745;
+    }
+
+    .requirement-not-met {
+        color: #dc3545;
+    }
+
+    .password-match-message {
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+</style>
 {% endblock %}
 
 {% block title %}Регистрация — Личная библиотека{% endblock %}
@@ -16,30 +72,60 @@
         <form method="post">
             {% csrf_token %}
             
-            {% if form.errors %}
+            {% if form.non_field_errors %}
             <ul class="errorlist">
-                {% for field in form %}
-                    {% for error in field.errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                {% endfor %}
                 {% for error in form.non_field_errors %}
                     <li>{{ error }}</li>
                 {% endfor %}
             </ul>
             {% endif %}
 
-            <label for="id_username">Имя пользователя</label>
-            {{ form.username }}
+            <div class="form-group">
+                <label for="id_username">Имя пользователя</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                <div class="field-error">{{ form.username.errors.0 }}</div>
+                {% endif %}
+            </div>
 
-            <label for="id_email">Электронная почта</label>
-            {{ form.email }}
+            <div class="form-group">
+                <label for="id_email">Электронная почта</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                <div class="field-error">{{ form.email.errors.0 }}</div>
+                {% endif %}
+            </div>
 
-            <label for="id_password1">Пароль</label>
-            {{ form.password1 }}
+            <div class="form-group password-field">
+                <label for="id_password1">Пароль</label>
+                {{ form.password1 }}
+                {% if form.password1.errors %}
+                <div class="field-error">{{ form.password1.errors.0 }}</div>
+                {% endif %}
+                <ul class="password-requirements">
+                    <li class="password-requirement" id="length-requirement">
+                        <i class="fas fa-times"></i> Минимум 8 символов
+                    </li>
+                    <li class="password-requirement" id="letter-requirement">
+                        <i class="fas fa-times"></i> Хотя бы одна английская буква
+                    </li>
+                    <li class="password-requirement" id="number-requirement">
+                        <i class="fas fa-times"></i> Хотя бы одна цифра
+                    </li>
+                    <li class="password-requirement" id="english-only-requirement">
+                        <i class="fas fa-times"></i> Только английские буквы, цифры и символы _ . -
+                    </li>
+                </ul>
+            </div>
 
-            <label for="id_password2">Повторите пароль</label>
-            {{ form.password2 }}
+            <div class="form-group password-field">
+                <label for="id_password2">Повторите пароль</label>
+                {{ form.password2 }}
+                {% if form.password2.errors %}
+                <div class="field-error">{{ form.password2.errors.0 }}</div>
+                {% endif %}
+                <div class="password-match-message" id="password-match-message"></div>
+            </div>
 
             <button type="submit" class="submit-button">Зарегистрироваться</button>
         </form>
@@ -50,26 +136,84 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Добавляем плейсхолдеры для полей
-    const usernameInput = document.getElementById('id_username');
-    const emailInput = document.getElementById('id_email');
-    const password1Input = document.getElementById('id_password1');
-    const password2Input = document.getElementById('id_password2');
+function checkPassword(input) {
+    const password = input.value;
+    
+    // Проверяем длину
+    const lengthRequirement = document.getElementById('length-requirement');
+    if (password.length >= 8) {
+        lengthRequirement.classList.add('requirement-met');
+        lengthRequirement.classList.remove('requirement-not-met');
+        lengthRequirement.querySelector('i').classList.remove('fa-times');
+        lengthRequirement.querySelector('i').classList.add('fa-check');
+    } else {
+        lengthRequirement.classList.remove('requirement-met');
+        lengthRequirement.classList.add('requirement-not-met');
+        lengthRequirement.querySelector('i').classList.add('fa-times');
+        lengthRequirement.querySelector('i').classList.remove('fa-check');
+    }
+    
+    // Проверяем наличие английской буквы
+    const letterRequirement = document.getElementById('letter-requirement');
+    if (/[a-zA-Z]/.test(password)) {
+        letterRequirement.classList.add('requirement-met');
+        letterRequirement.classList.remove('requirement-not-met');
+        letterRequirement.querySelector('i').classList.remove('fa-times');
+        letterRequirement.querySelector('i').classList.add('fa-check');
+    } else {
+        letterRequirement.classList.remove('requirement-met');
+        letterRequirement.classList.add('requirement-not-met');
+        letterRequirement.querySelector('i').classList.add('fa-times');
+        letterRequirement.querySelector('i').classList.remove('fa-check');
+    }
+    
+    // Проверяем наличие цифр
+    const numberRequirement = document.getElementById('number-requirement');
+    if (/\d/.test(password)) {
+        numberRequirement.classList.add('requirement-met');
+        numberRequirement.classList.remove('requirement-not-met');
+        numberRequirement.querySelector('i').classList.remove('fa-times');
+        numberRequirement.querySelector('i').classList.add('fa-check');
+    } else {
+        numberRequirement.classList.remove('requirement-met');
+        numberRequirement.classList.add('requirement-not-met');
+        numberRequirement.querySelector('i').classList.add('fa-times');
+        numberRequirement.querySelector('i').classList.remove('fa-check');
+    }
 
-    if (usernameInput) usernameInput.placeholder = 'Введите имя пользователя';
-    if (emailInput) emailInput.placeholder = 'Введите e-mail';
-    if (password1Input) password1Input.placeholder = 'Введите пароль';
-    if (password2Input) password2Input.placeholder = 'Повторите пароль';
+    // Проверяем допустимые символы
+    const englishOnlyRequirement = document.getElementById('english-only-requirement');
+    if (/^[a-zA-Z0-9_.-]*$/.test(password)) {
+        englishOnlyRequirement.classList.add('requirement-met');
+        englishOnlyRequirement.classList.remove('requirement-not-met');
+        englishOnlyRequirement.querySelector('i').classList.remove('fa-times');
+        englishOnlyRequirement.querySelector('i').classList.add('fa-check');
+    } else {
+        englishOnlyRequirement.classList.remove('requirement-met');
+        englishOnlyRequirement.classList.add('requirement-not-met');
+        englishOnlyRequirement.querySelector('i').classList.add('fa-times');
+        englishOnlyRequirement.querySelector('i').classList.remove('fa-check');
+    }
 
-    // Добавляем проверку совпадения паролей
-    const form = document.querySelector('form');
-    form.addEventListener('submit', (event) => {
-        if (password1Input.value !== password2Input.value) {
-            event.preventDefault();
-            alert('Пароли не совпадают!');
+    checkPasswordMatch();
+}
+
+function checkPasswordMatch() {
+    const password1 = document.getElementById('id_password1').value;
+    const password2 = document.getElementById('id_password2').value;
+    const messageElement = document.getElementById('password-match-message');
+    
+    if (password2.length > 0) {
+        if (password1 === password2) {
+            messageElement.textContent = 'Пароли совпадают';
+            messageElement.style.color = '#28a745';
+        } else {
+            messageElement.textContent = 'Пароли не совпадают';
+            messageElement.style.color = '#dc3545';
         }
-    });
-});
+    } else {
+        messageElement.textContent = '';
+    }
+}
 </script>
 {% endblock %} 
