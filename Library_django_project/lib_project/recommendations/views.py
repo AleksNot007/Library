@@ -5,6 +5,7 @@ from django.views.decorators.http import require_http_methods
 from django.core.exceptions import ValidationError
 from .models import UserSurveyProfile, Book, Author, Language, UserGenrePreference
 from .utils import save_survey_results, get_book_recommendations, seed_books
+from .recommender import BookRecommender, update_recommendations
 import logging
 
 logger = logging.getLogger(__name__)
@@ -282,3 +283,20 @@ def author_autocomplete(request):
     suggestions = (Author.objects.filter(name__icontains=query)
                                .values('id', 'name')[:10])
     return JsonResponse(list(suggestions), safe=False)
+
+@login_required
+@require_http_methods(["POST"])
+def update_recommendations_view(request):
+    """API endpoint для обновления рекомендаций"""
+    try:
+        recommendations = update_recommendations(request.user.id, limit=8)
+        return JsonResponse({
+            'status': 'success',
+            'recommendations': recommendations
+        })
+    except Exception as e:
+        logger.error(f"Error updating recommendations for user {request.user.id}: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Не удалось обновить рекомендации'
+        }, status=500)

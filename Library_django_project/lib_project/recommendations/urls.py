@@ -15,6 +15,7 @@ urlpatterns = [
     # API для получения данных
     path('api/authors/', views.get_authors, name='get_authors'),
     path('api/books-by-genres/', views.get_books_by_genres, name='get_books_by_genres'),
+    path('api/update-recommendations/', views.update_recommendations_view, name='update_recommendations'),
     
     # Сохранение результатов каждого шага
     path('survey/save-step1/', views.save_step1, name='save_step1'),

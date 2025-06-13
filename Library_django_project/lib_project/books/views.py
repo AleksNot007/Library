@@ -3,89 +3,139 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.db.models import Count, Avg, Q, Case, When, IntegerField, Value
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseBadRequest
 from .models import Book, Author, Review, UserBookRelation, Quote, Collection
-from .forms import OpenLibrarySearchForm
+from .forms import OpenLibrarySearchForm, BookForm, ReviewForm, QuoteForm
 import requests
 from datetime import datetime
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.temp import NamedTemporaryFile
 from django.core.files import File
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_protect
 from urllib.parse import quote
 import re
 from django.utils.text import slugify
 from django.http import Http404
+from django.utils.safestring import mark_safe
+from django.urls import reverse
+from users.models import ModeratorMessage  # Обновляем импорт ModeratorMessage из приложения users
 
 def home(request):
     """Главная страница"""
     # Получаем популярные книги
     popular_books = Book.objects.filter(
         is_approved=True
-    ).select_related('submitted_by').prefetch_related('authors').order_by('-id')[:4]
+    ).annotate(
+        readers_count=Count('user_relations', distinct=True)
+    ).select_related('submitted_by').prefetch_related('authors').order_by('-readers_count')[:8]
     
-    # Получаем рекомендованные книги для авторизованного пользователя
-    recommended_books = []
-    if request.user.is_authenticated:
-        # Получаем жанры, которые пользователь уже читал
-        user_genres = Book.objects.filter(
-            user_relations__user=request.user
-        ).values_list('genre', flat=True).distinct()
+    # Получаем лучшие книги по жанрам с улучшенной фильтрацией
+    best_books_by_genre = {}
+    for genre_code, genre_name in Book.GENRE_CHOICES:
+        # Получаем книги с высоким рейтингом и достаточным количеством отзывов
+        best_books = Book.objects.filter(
+            is_approved=True,
+            genre=genre_code,
+            world_rating__gte=4.5  # Снижаем порог рейтинга для большего охвата
+        ).annotate(
+            reviews_count=Count('reviews'),
+            readers_count=Count('user_relations', distinct=True)
+        ).filter(
+            reviews_count__gte=3  # Минимум 3 отзыва для объективности
+        ).select_related('submitted_by').prefetch_related('authors').order_by('-world_rating', '-readers_count')[:12]
         
-        # Получаем книги из тех же жанров, которые пользователь еще не читал
-        recommended_books = Book.objects.filter(
-            genre__in=user_genres,
-            is_approved=True
-        ).exclude(
-            user_relations__user=request.user
-        ).select_related('submitted_by').prefetch_related('authors').order_by('?')[:4]
+        if best_books.exists():
+            # Добавляем дополнительную информацию о жанре
+            total_books = Book.objects.filter(genre=genre_code, is_approved=True).count()
+            avg_rating = best_books.aggregate(Avg('world_rating'))['world_rating__avg']
+            
+            best_books_by_genre[genre_code] = {
+                'name': genre_name,
+                'books': best_books,
+                'total_books': total_books,
+                'avg_rating': round(avg_rating, 1) if avg_rating else None
+            }
+    
+    # Сортируем жанры по количеству книг
+    best_books_by_genre = dict(sorted(
+        best_books_by_genre.items(),
+        key=lambda x: x[1]['total_books'],
+        reverse=True
+    ))
+    
+    # Получаем рекомендации для авторизованного пользователя
+    recommended_books = None
+    if request.user.is_authenticated:
+        # Сначала пробуем получить рекомендации из системы рекомендаций
+        if hasattr(request.user, 'test_recommendations'):
+            recommended_books = request.user.test_recommendations.all()[:8]
+        
+        # Если нет рекомендаций из системы, используем базовые рекомендации
+        if not recommended_books:
+            # Получаем жанры из прочитанных книг
+            user_genres = Book.objects.filter(
+                user_relations__user=request.user
+            ).values_list('genre', flat=True).distinct()
+            
+            # Если есть жанры, рекомендуем книги из этих жанров
+            if user_genres:
+                recommended_books = Book.objects.filter(
+                    genre__in=user_genres,
+                    is_approved=True
+                ).exclude(
+                    user_relations__user=request.user
+                ).select_related('submitted_by').prefetch_related('authors').order_by('?')[:8]
+            # Если нет жанров, рекомендуем популярные книги
+            else:
+                recommended_books = popular_books
     
     context = {
         'popular_books': popular_books,
         'recommended_books': recommended_books,
         'GENRE_CHOICES': Book.GENRE_CHOICES,
+        'best_books_by_genre': best_books_by_genre,
     }
     return render(request, 'books/home.html', context)
 
 def catalog(request):
-    """Общий каталог всех книг библиотеки"""
-    genre = request.GET.get('genre')
-    ordering = request.GET.get('ordering', 'title')
-    page_number = request.GET.get('page', 1)
-
-    # Показываем только одобренные книги в каталоге
+    """Каталог книг с фильтрацией и сортировкой"""
     books = Book.objects.filter(
         is_approved=True
-    ).select_related('submitted_by').prefetch_related('authors')
-
+    ).select_related('submitted_by').prefetch_related('authors', 'reviews')
+    
+    # Фильтрация по жанру
+    genre = request.GET.get('genre')
     if genre:
         books = books.filter(genre=genre)
-
-    # Расширенная сортировка
-    if ordering == 'title':
-        books = books.order_by('title')
-    elif ordering == '-published_date':
-        books = books.order_by('-published_date')
-    elif ordering == 'published_date':
-        books = books.order_by('published_date')
-    elif ordering == 'rating':
-        books = books.annotate(avg_rating=Avg('reviews__rating')).order_by('-avg_rating')
+    
+    # Сортировка
+    ordering = request.GET.get('ordering', '-created_at')
+    if ordering == 'rating':
+        books = books.order_by('-site_rating')
     elif ordering == 'popularity':
-        books = books.annotate(num_added=Count('user_relations')).order_by('-num_added')
+        books = books.annotate(relations_count=Count('user_relations')).order_by('-relations_count')
     else:
-        books = books.order_by('title')
-
+        books = books.order_by(ordering)
+    
+    # Поиск
+    query = request.GET.get('q')
+    if query:
+        books = books.filter(title__icontains=query)
+    
     # Пагинация
-    paginator = Paginator(books, 12)  # 12 книг на странице
-    page_obj = paginator.get_page(page_number)
-
+    paginator = Paginator(books, 12)
+    page = request.GET.get('page')
+    books = paginator.get_page(page)
+    
     context = {
-        'books': page_obj,
-        'GENRE_CHOICES': Book.GENRE_CHOICES,
+        'books': books,
+        'query': query,
         'selected_genre': genre,
         'selected_ordering': ordering,
+        'GENRE_CHOICES': Book.GENRE_CHOICES
     }
+    
     return render(request, 'books/catalog.html', context)
 
 @login_required
@@ -106,12 +156,14 @@ def user_library(request):
     want_to_read = [rel for rel in user_books if rel.list_type == 'want']
     finished = [rel for rel in user_books if rel.list_type == 'read']
     favorites = [rel for rel in user_books if rel.list_type == 'favorite']
+    stopped = [rel for rel in user_books if rel.list_type == 'stop']  # Добавляем стоп-лист
 
     context = {
         'reading_now': reading_now,
         'want_to_read': want_to_read,
         'finished': finished,
         'favorites': favorites,
+        'stopped': stopped,  # Добавляем в контекст
     }
 
     return render(request, 'lib/my_library.html', context)
@@ -161,77 +213,50 @@ def user_blacklist(request):
 def search(request):
     """Поиск книг по названию, автору или жанру"""
     query = request.GET.get('q', '').strip()
+    format = request.GET.get('format', 'html')  # Добавляем параметр для возврата JSON при AJAX-запросах
     
     if query:
         # Разбиваем поисковый запрос на слова
         search_words = query.split()
         
-        # Сначала ищем точное совпадение (все слова должны быть в названии)
-        exact_match_query = Q()
+        # Создаем Q-объекты для поиска по названию и автору
+        title_query = Q()
+        author_query = Q()
+        
         for word in search_words:
-            exact_match_query &= Q(title__icontains=word)
+            title_query |= Q(title__icontains=word)
+            author_query |= Q(authors__name__icontains=word)
         
-        exact_matches = Book.objects.filter(
-            exact_match_query & Q(is_approved=True)
-        ).distinct().select_related('submitted_by').prefetch_related('authors')
-
-        # Если точных совпадений нет, ищем частичные совпадения
-        if not exact_matches.exists():
-            # Создаем Q-объект для поиска частичных совпадений
-            partial_match_query = Q()
-            relevance_cases = []
-            
-            for word in search_words:
-                word_query = Q(title__icontains=word)
-                partial_match_query |= word_query
-                # Добавляем Case для подсчета совпадений каждого слова
-                relevance_cases.append(
-                    Case(
-                        When(title__icontains=word, then=1),
-                        default=0,
-                        output_field=IntegerField(),
-                    )
-                )
-            
-            similar_books = Book.objects.filter(
-                (partial_match_query | 
-                Q(authors__name__icontains=query) |
-                Q(genre__icontains=query)) &
-                Q(is_approved=True)
-            ).annotate(
-                # Считаем релевантность как сумму совпадений слов
-                relevance=sum(relevance_cases)
-            ).distinct().select_related('submitted_by').prefetch_related('authors').order_by('-relevance', 'title')
-
-            context = {
-                'books': similar_books,
-                'query': query,
-                'no_exact_match': True,
-                'no_results': not similar_books.exists(),
-            }
-        else:
-            context = {
-                'books': exact_matches,
-                'query': query,
-                'no_exact_match': False,
-                'no_results': False,
-            }
-    else:
-        # Если нет запроса, показываем последние добавленные книги
+        # Объединяем условия поиска
         books = Book.objects.filter(
-            is_approved=True
-        ).order_by('-created_at')[:10]
+            (title_query | author_query) & Q(is_approved=True)
+        ).distinct().select_related('submitted_by').prefetch_related('authors')
         
-        context = {
-            'books': books,
-            'query': query,
-            'no_exact_match': False,
-            'no_results': False,
-        }
+        # Сортируем результаты по релевантности
+        books = books.annotate(
+            relevance=Count('id')  # Базовая релевантность
+        ).order_by('-relevance', 'title')
+        
+        if format == 'json':
+            # Для AJAX-запросов возвращаем JSON
+            books_data = [{
+                'id': book.id,
+                'title': book.title,
+                'authors': [author.name for author in book.authors.all()],
+                'cover_url': book.cover.url if book.cover else None,
+            } for book in books[:20]]  # Ограничиваем результаты
+            return JsonResponse({'books': books_data})
+    else:
+        books = Book.objects.filter(is_approved=True).order_by('-created_at')[:10]
     
+    # Для обычных запросов возвращаем HTML
+    context = {
+        'books': books,
+        'query': query,
+    }
     return render(request, 'books/search.html', context)
 
-def book_detail(request, book_id):
+def detail(request, book_id):
     """Детальная страница книги"""
     book = get_object_or_404(Book, id=book_id)
     
@@ -311,70 +336,26 @@ def collections_list(request):
     }
     return render(request, 'books/collections/list.html', context)
 
-def collection_detail(request, collection_type, genre=None):
-    """Детальная страница подборки"""
-    if collection_type == 'genre' and genre:
-        # Создаем словарь для преобразования русских названий в коды
-        genre_name_to_code = {name: code for code, name in Book.GENRE_CHOICES}
-        
-        # Если передано русское название жанра, получаем его код
-        genre_code = genre_name_to_code.get(genre, genre)
-        
-        # Получаем топ книг конкретного жанра
-        books = Book.objects.filter(
-            genre=genre_code,
-            is_approved=True
-        ).annotate(
-            avg_rating=Avg('reviews__rating'),
-            readers_count=Count('user_relations', distinct=True)
-        ).filter(
-            avg_rating__gte=4.5
-        ).order_by('-avg_rating', '-readers_count')[:100]
-        
-        # Получаем русское название жанра из кода
-        genre_display_name = dict(Book.GENRE_CHOICES).get(genre_code, genre_code)
-        title = f"Топ-100 книг жанра {genre_display_name}"
-        
-    elif collection_type == 'popular':
-        # Получаем популярные книги
-        total_users = get_user_model().objects.count()
-        books = Book.objects.filter(
-            is_approved=True
-        ).annotate(
-            readers_count=Count('user_relations', distinct=True)
-        ).filter(
-            readers_count__gte=total_users * 0.3
-        ).order_by('-readers_count')[:100]
-        
-        title = "Самые популярные книги"
-        
-    elif collection_type == 'top_rated':
-        # Получаем топ по рейтингу
-        books = Book.objects.filter(
-            is_approved=True
-        ).annotate(
-            avg_rating=Avg('reviews__rating'),
-            reviews_count=Count('reviews')
-        ).filter(
-            avg_rating__gte=4.5,
-            reviews_count__gte=5
-        ).order_by('-avg_rating', '-reviews_count')[:100]
-        
-        title = "Топ-100 книг по рейтингу"
-        
-    elif collection_type == 'most_added':
-        # Получаем часто добавляемые книги
-        books = Book.objects.filter(
-            is_approved=True
-        ).annotate(
-            total_adds=Count('user_relations')
-        ).order_by('-total_adds')[:100]
-        
-        title = "Часто добавляемые книги"
-        
-    else:
-        raise Http404("Подборка не найдена")
-
+def genre_collection_detail(request, genre):
+    """Детальная страница подборки книг определенного жанра"""
+    # Создаем словарь для преобразования русских названий в коды
+    genre_name_to_code = {name: code for code, name in Book.GENRE_CHOICES}
+    
+    # Если передано русское название жанра, получаем его код
+    genre_code = genre_name_to_code.get(genre, genre)
+    
+    # Получаем топ книг конкретного жанра
+    books = Book.objects.filter(
+        genre=genre_code,
+        is_approved=True,
+        world_rating__gte=4.5,  # Рейтинг >= 4.5
+        world_rating__lte=5.0   # Рейтинг <= 5.0
+    ).order_by('-world_rating', '-created_at')[:100]
+    
+    # Получаем русское название жанра из кода
+    genre_display_name = dict(Book.GENRE_CHOICES).get(genre_code, genre_code)
+    title = f"Топ-100 книг жанра {genre_display_name}"
+    
     # Пагинация
     paginator = Paginator(books, 12)  # 12 книг на странице
     page_number = request.GET.get('page')
@@ -383,10 +364,29 @@ def collection_detail(request, collection_type, genre=None):
     context = {
         'title': title,
         'books': page_obj,
-        'collection_type': collection_type,
         'genre': genre,
+        'genre_display_name': genre_display_name,
     }
-    return render(request, 'books/collections/detail.html', context)
+    return render(request, 'books/collections/genre_detail.html', context)
+
+@login_required
+def collection_detail(request, slug):
+    """Детальная страница подборки"""
+    collection = get_object_or_404(Collection, slug=slug)
+    
+    # Проверяем права доступа
+    if not collection.is_public and collection.created_by != request.user and not request.user.is_staff:
+        messages.error(request, 'У вас нет доступа к этой подборке')
+        return redirect('books:user_collections')
+    
+    # Получаем книги подборки с авторами
+    books = collection.books.select_related('submitted_by').prefetch_related('authors').all()
+    
+    context = {
+        'collection': collection,
+        'books': books,
+    }
+    return render(request, 'books/collections/collection_detail.html', context)
 
 @login_required
 def create_collection(request):
@@ -476,9 +476,9 @@ def edit_collection(request, slug):
 
 @login_required
 @require_http_methods(["POST"])
-def add_book_to_collection(request, collection_slug, book_id):
+def add_book_to_collection(request, slug, book_id):
     """Добавление книги в подборку"""
-    collection = get_object_or_404(Collection, slug=collection_slug)
+    collection = get_object_or_404(Collection, slug=slug)
     book = get_object_or_404(Book, id=book_id)
     
     # Проверяем права на редактирование
@@ -487,6 +487,13 @@ def add_book_to_collection(request, collection_slug, book_id):
             'status': 'error',
             'message': 'У вас нет прав на редактирование этой подборки'
         }, status=403)
+    
+    # Проверяем, не добавлена ли уже книга
+    if book in collection.books.all():
+        return JsonResponse({
+            'status': 'info',
+            'message': 'Эта книга уже есть в подборке'
+        })
     
     # Добавляем книгу в подборку
     collection.books.add(book)
@@ -594,14 +601,14 @@ def external_book_search(title, language=None):
         return None
 
 @login_required
-def search_openlibrary(request):
-    """Поиск книг в Open Library"""
+def openlibrary_search(request):
+    """Поиск книг в OpenLibrary API"""
     query = request.GET.get('q', '')
     language = request.GET.get('language', '')
     results = []
     page_obj = None
     available_languages = set()
-
+    
     if query:
         search_results = external_book_search(query, language if language else None)
         
@@ -686,12 +693,19 @@ def search_openlibrary(request):
         if get_language_name(code)  # Только языки, для которых есть названия
     ], key=lambda x: x[1])
 
-    return render(request, 'books/openlibrary_search.html', {
+    # Получаем список жанров из модели Book
+    genre_choices = Book.GENRE_CHOICES
+
+    context = {
+        'form': OpenLibrarySearchForm(initial={'q': query, 'language': language}),
         'results': page_obj,
         'query': query,
         'selected_language': language,
         'language_choices': language_choices,
-    })
+        'GENRE_CHOICES': genre_choices,
+    }
+
+    return render(request, 'books/openlibrary_search.html', context)
 
 def is_russian_text(text):
     """Проверяет, содержит ли текст русские буквы"""
@@ -736,8 +750,67 @@ def get_book_details(olid):
         print(f"Error fetching book details: {e}")
         return None
 
+def check_book(request, book_id):
+    """Проверяет существование книги по ID"""
+    exists = Book.objects.filter(id=book_id).exists()
+    return JsonResponse({'exists': exists, 'book_id': book_id})
+
+def remove_duplicate_books():
+    """Удаление дубликатов книг с одинаковым названием и автором"""
+    # Получаем все книги
+    books = Book.objects.all().prefetch_related('authors')
+    
+    # Словарь для хранения уникальных книг
+    unique_books = {}
+    duplicates = []
+    
+    for book in books:
+        # Получаем авторов книги, сортируем их имена для консистентного сравнения
+        authors = sorted([author.name.lower().strip() for author in book.authors.all()])
+        # Создаем ключ из названия книги и авторов
+        key = (book.title.lower().strip(), tuple(authors))
+        
+        if key in unique_books:
+            # Если книга уже существует, проверяем, какую оставить
+            existing_book = unique_books[key]
+            
+            # Оставляем книгу с обложкой или более старую
+            if (not existing_book.cover and book.cover) or \
+               (existing_book.created_at > book.created_at):
+                duplicates.append(existing_book)
+                unique_books[key] = book
+            else:
+                duplicates.append(book)
+        else:
+            # Если это первая книга с таким названием и авторами
+            unique_books[key] = book
+    
+    # Удаляем дубликаты
+    for duplicate in duplicates:
+        duplicate.delete()
+
+    return len(duplicates)
+
+def check_book_exists(title, author_name):
+    """Проверяет существование книги по названию и автору"""
+    title = title.lower().strip()
+    author_name = author_name.lower().strip()
+    
+    # Ищем книги с похожим названием
+    similar_books = Book.objects.filter(
+        title__iexact=title
+    ).prefetch_related('authors')
+    
+    # Проверяем авторов
+    for book in similar_books:
+        book_authors = [author.name.lower().strip() for author in book.authors.all()]
+        if author_name in book_authors:
+            return True, book
+    
+    return False, None
+
 @login_required
-def add_book_from_openlibrary(request):
+def add_from_openlibrary(request):
     """Добавление книги из Open Library"""
     if request.method == 'POST':
         try:
@@ -754,6 +827,18 @@ def add_book_from_openlibrary(request):
                 )
                 return redirect('books:openlibrary_search')
 
+            title = book_data.get('title', '').strip()
+            author_name = book_data.get('author', '').strip()
+
+            # Проверяем существование книги
+            exists, existing_book = check_book_exists(title, author_name)
+            if exists:
+                messages.error(
+                    request,
+                    f'Книга "{existing_book.title}" уже существует в библиотеке.'
+                )
+                return redirect('books:detail', book_id=existing_book.id)
+            
             # Безопасное получение года публикации
             try:
                 first_publish_year = int(book_data.get('first_publish_year', 0))
@@ -765,34 +850,27 @@ def add_book_from_openlibrary(request):
                 published_date = None
             
             # Создаем или получаем автора
-            author_name = book_data.get('author', 'Unknown Author')
             author, _ = Author.objects.get_or_create(
                 name=author_name,
                 defaults={
-                    'century': century or 20,  # Если век не определен, используем 20-й
+                    'century': century or 20,
                     'country': book_data.get('author_country', 'Неизвестно')
                 }
             )
 
-            # Определяем статус модерации на основе полноты данных
-            is_complete = all([
-                book_data.get('title'),
-                book_data.get('author'),
-                book_data.get('first_publish_year'),
-                book_data.get('description'),
-                book_data.get('cover_i')
-            ])
+            # Получаем комментарии пользователя для модератора
+            user_comments = book_data.get('user_comments', '').strip()
             
             # Создаем книгу
             book = Book.objects.create(
-                title=book_data.get('title', 'Без названия').strip(),
+                title=title,
                 description=book_data.get('description', '').strip() or 'Описание отсутствует',
                 published_date=published_date,
                 world_rating=None,
                 is_approved=False,  # Книга всегда требует одобрения модератора
-                needs_moderation=not is_complete,  # Если данные неполные, требуется проверка модератором
                 submitted_by=request.user,
-                genre=book_data.get('genre', 'other')  # Значение по умолчанию
+                genre=book_data.get('genre', 'other'),
+                moderation_comment=user_comments
             )
             
             # Добавляем автора к книге
@@ -808,17 +886,20 @@ def add_book_from_openlibrary(request):
                         File(img_temp),
                         save=True
                     )
+
+            # Создаем сообщение для модератора
+            ModeratorMessage.objects.create(
+                user=request.user,
+                book=book,
+                message_type='book_submitted',
+                message=f'Книга "{book.title}" добавлена из OpenLibrary и ожидает модерации.\n'
+                        f'Комментарии пользователя: {user_comments if user_comments else "Нет комментариев"}'
+            )
             
-            # Формируем сообщение в зависимости от полноты данных
-            if is_complete:
-                message = f'Книга "{book.title}" добавлена и ожидает одобрения модератора.'
-            else:
-                message = (
-                    f'Книга "{book.title}" добавлена, но требует дополнительной проверки '
-                    'из-за неполных данных. Модератор дополнит недостающую информацию.'
-                )
-            
-            messages.success(request, message)
+            messages.success(
+                request, 
+                'Книга отправлена на модерацию. После проверки модератором вы сможете добавить её в свои списки.'
+            )
             return redirect('books:detail', book_id=book.id)
             
         except Exception as e:
@@ -836,8 +917,8 @@ def add_book(request):
     if request.method == 'POST':
         try:
             # Проверяем обязательные поля
-            title = request.POST.get('title')
-            author_name = request.POST.get('author')
+            title = request.POST.get('title', '').strip()
+            author_name = request.POST.get('author', '').strip()
             genre = request.POST.get('genre')
 
             if not all([title, author_name, genre]):
@@ -846,6 +927,15 @@ def add_book(request):
                     'Пожалуйста, заполните все обязательные поля: название, автор и жанр.'
                 )
                 return redirect('books:add_book')
+
+            # Проверяем существование книги
+            exists, existing_book = check_book_exists(title, author_name)
+            if exists:
+                messages.error(
+                    request,
+                    f'Книга "{existing_book.title}" уже существует в библиотеке.'
+                )
+                return redirect('books:detail', book_id=existing_book.id)
 
             # Создаем или получаем автора
             author, _ = Author.objects.get_or_create(
@@ -856,14 +946,52 @@ def add_book(request):
                 }
             )
             
+            # Обработка года публикации
+            published_year = request.POST.get('published_date')
+            published_date = None
+            current_year = datetime.now().year
+
+            if published_year:
+                try:
+                    year = int(published_year)
+                    if year < 1 or year > current_year:
+                        messages.warning(
+                            request,
+                            f'Год публикации должен быть между 1 и {current_year}. Поле будет оставлено пустым.'
+                        )
+                    else:
+                        published_date = datetime(year, 1, 1).date()
+                except ValueError:
+                    messages.warning(
+                        request,
+                        'Введите корректный год публикации (например: 1984). Поле будет оставлено пустым.'
+                    )
+
+            # Обработка количества страниц
+            pages = request.POST.get('pages')
+            try:
+                pages = int(pages) if pages else None
+                if pages is not None and pages < 1:
+                    messages.warning(
+                        request,
+                        'Количество страниц должно быть положительным числом. Поле будет оставлено пустым.'
+                    )
+                    pages = None
+            except ValueError:
+                messages.warning(
+                    request,
+                    'Введите корректное количество страниц. Поле будет оставлено пустым.'
+                )
+                pages = None
+            
             # Создаем книгу
             book = Book.objects.create(
-                title=title.strip(),
+                title=title,
                 description=request.POST.get('description', '').strip(),
-                published_date=request.POST.get('published_date') or None,
+                published_date=published_date,
+                pages=pages,  # Добавляем количество страниц
                 genre=genre,
-                is_approved=False,  # Новая книга по умолчанию не одобрена
-                needs_moderation=True,  # Требуется модерация
+                is_approved=False,  # Книга не одобрена
                 submitted_by=request.user
             )
             
@@ -875,12 +1003,12 @@ def add_book(request):
                 book.cover = request.FILES['cover']
                 book.save()
             
-            messages.info(
+            messages.success(
                 request, 
-                f'Книга "{book.title}" добавлена и ожидает проверки модератором. '
-                'После одобрения вы сможете добавить её в свою личную библиотеку.'
+                'Книга отправлена на модерацию. После проверки модератором она появится в каталоге.'
             )
-            return redirect('books:detail', book_id=book.id)
+            
+            return redirect('books:catalog')
             
         except Exception as e:
             messages.error(
@@ -894,237 +1022,526 @@ def add_book(request):
     }
     return render(request, 'books/add_book.html', context)
 
-@login_required
-@require_http_methods(["GET", "POST"])
-@ensure_csrf_cookie
-def add_to_list(request, book_id, list_type):
-    """Добавление книги в список пользователя"""
-    print(f"Received request: {request.method} {request.path}")
-    print(f"Book ID: {book_id}, List Type: {list_type}")
-    print(f"User: {request.user.username}")
-    print(f"Headers: {dict(request.headers)}")
+# Обновляем логику модерации в админке
+def approve_book(modeladmin, request, queryset):
+    """Одобрение книги модератором"""
+    # Сначала удаляем дубликаты
+    duplicates_removed = remove_duplicate_books()
+    if duplicates_removed > 0:
+        messages.info(request, f'Удалено {duplicates_removed} дубликатов книг')
     
+    for book in queryset:
+        # Проверяем, не одобрена ли уже книга
+        if not book.is_approved:
+            # Проверяем на дубликаты перед одобрением
+            exists, existing_book = check_book_exists(book.title, book.authors.first().name if book.authors.exists() else '')
+            if exists and existing_book.id != book.id:
+                messages.warning(
+                    request,
+                    f'Книга "{book.title}" является дубликатом существующей книги "{existing_book.title}" и будет удалена.'
+                )
+                book.delete()
+                continue
+            
+            book.is_approved = True
+            book.needs_moderation = False
+            book.save()
+            
+            # Создаем сообщение для пользователя с ссылкой на книгу
+            ModeratorMessage.objects.create(
+                user=book.submitted_by,
+                book=book,
+                message_type='book_approved',
+                message=f'Ваша книга "{book.title}" была одобрена и добавлена в каталог. '
+                        f'<a href="{reverse("books:detail", args=[book.id])}">Перейти к книге</a>'
+            )
+            
+            messages.success(
+                request,
+                f'Книга "{book.title}" успешно одобрена и добавлена в каталог.'
+            )
+
+def reject_book(request, book_id):
+    """Отклонение книги модератором"""
+    book = get_object_or_404(Book, id=book_id)
+    
+    # Отмечаем книгу как отклоненную
+    book.is_approved = False
+    book.needs_moderation = False
+    book.save()
+    
+    # Создаем сообщение для пользователя без ссылки
+    ModeratorMessage.objects.create(
+        user=book.submitted_by,
+        book=book,
+        message_type='book_rejected',
+        message=f'Ваша книга "{book.title}" была отклонена модератором.'
+    )
+    
+    # Удаляем книгу
+    book.delete()
+    
+    messages.warning(request, f'Книга "{book.title}" была отклонена и удалена')
+    return redirect('books:catalog')
+
+@login_required
+@require_POST
+def update_progress(request, book_id):
+    """Обновление прогресса чтения книги"""
+    book = get_object_or_404(Book, id=book_id)
+    try:
+        progress_pages = int(request.POST.get('progress_pages', 0))
+        if progress_pages < 0 or progress_pages > book.pages:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Некорректное количество страниц'
+            }, status=400)
+
+        relation, created = UserBookRelation.objects.get_or_create(
+            user=request.user,
+            book=book
+        )
+        relation.progress_pages = progress_pages
+        relation.save()  # progress будет автоматически обновлен
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Прогресс обновлен',
+            'progress': relation.progress
+        })
+    except ValueError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Некорректные данные'
+        }, status=400)
+
+@login_required
+@require_POST
+def update_notes(request, book_id):
+    """Обновление личных заметок к книге"""
+    book = get_object_or_404(Book, id=book_id)
+    notes = request.POST.get('notes', '').strip()
+
+    relation, created = UserBookRelation.objects.get_or_create(
+        user=request.user,
+        book=book
+    )
+    relation.notes = notes
+    relation.save()
+
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Заметки обновлены'
+    })
+
+@login_required
+@require_POST
+def add_to_list(request, book_id, list_type):
+    """Добавление книги в различные списки пользователя"""
     try:
         # Проверяем допустимость типа списка
-        valid_list_types = ['want', 'read', 'in_progress', 'stop', 'favorite', 'blacklist', 'none']
+        valid_list_types = ['want', 'reading', 'read', 'stop', 'favorite', 'blacklist', 'in_progress']
         if list_type not in valid_list_types:
-            print(f"Invalid list type: {list_type}")
             return JsonResponse({
                 'status': 'error',
-                'message': f'Недопустимый тип списка: {list_type}'
+                'message': 'Некорректный тип списка'
             }, status=400)
 
-        # Проверяем существование книги
-        try:
-            book = Book.objects.get(id=book_id)
-            print(f"Found book: {book.title} (ID: {book.id})")
-        except Book.DoesNotExist:
-            print(f"Book not found: {book_id}")
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Книга не найдена'
-            }, status=404)
+        book = get_object_or_404(Book, id=book_id)
         
         # Проверяем, одобрена ли книга
-        if not book.is_approved and list_type != 'none':
-            print(f"Book not approved: {book.title}")
+        if not book.is_approved:
             return JsonResponse({
                 'status': 'error',
-                'message': 'Книга ожидает одобрения модератора'
-            }, status=400)
-        
-        # Словарь для перевода типов списков
-        list_type_display = {
-            'want': 'Хочу прочесть',
+                'message': 'Книга ожидает одобрения модератора. Вы сможете добавить её в список после проверки.'
+            }, status=403)
+
+        relation, created = UserBookRelation.objects.get_or_create(
+            user=request.user,
+            book=book,
+            defaults={'list_type': list_type}
+        )
+
+        if not created:
+            # Если отношение уже существует, обновляем тип списка
+            relation.list_type = list_type
+            # Если книга добавляется в избранное
+            if list_type == 'favorite':
+                relation.is_favourite = True
+            elif list_type != 'favorite' and relation.is_favourite:
+                relation.is_favourite = False
+            relation.save()
+
+        # Получаем читаемое название списка
+        list_names = {
+            'want': 'Хочу прочитать',
+            'reading': 'Читаю',
             'read': 'Прочитано',
-            'in_progress': 'Читаю сейчас',
-            'stop': 'Стоп-лист',
+            'stop': 'Отложено',
             'favorite': 'Избранное',
             'blacklist': 'Черный список',
-            'none': 'Не в списке'
+            'in_progress': 'Читаю сейчас'
         }
+        list_name = list_names.get(list_type, list_type)
 
-        # Получаем текущее отношение пользователь-книга
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Книга "{book.title}" добавлена в список "{list_name}"'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Произошла ошибка при добавлении книги в список: {str(e)}'
+        }, status=500)
+
+@login_required
+@require_POST
+def add_quote(request, book_id):
+    """Добавление цитаты из книги"""
+    book = get_object_or_404(Book, id=book_id)
+    form = QuoteForm(request.POST)
+    
+    if form.is_valid():
+        quote = form.save(commit=False)
+        quote.book = book
+        quote.user = request.user
+        quote.save()
+        
+        messages.success(request, 'Цитата успешно добавлена')
+        return redirect('books:detail', book_id=book.id)
+    
+    messages.error(request, 'Ошибка при добавлении цитаты')
+    return redirect('books:detail', book_id=book.id)
+
+@login_required
+@require_POST
+def add_review(request, book_id):
+    """Добавление отзыва на книгу"""
+    book = get_object_or_404(Book, id=book_id)
+    form = ReviewForm(request.POST)
+    
+    if form.is_valid():
+        review = form.save(commit=False)
+        review.book = book
+        review.user = request.user
+        review.save()
+        
+        # Обновляем рейтинг книги
+        book.site_rating = book.reviews.aggregate(Avg('rating'))['rating__avg']
+        book.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Отзыв добавлен'
+        })
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Некорректные данные'
+    }, status=400)
+
+def book_detail(request, book_id):
+    """Детальная информация о книге"""
+    book = get_object_or_404(Book, id=book_id)
+    user_relation = None
+    
+    if request.user.is_authenticated:
         user_relation = UserBookRelation.objects.filter(
             user=request.user,
             book=book
         ).first()
-        print(f"Current relation: {user_relation.list_type if user_relation else 'None'}")
-
-        # Если тип списка 'none', удаляем отношение
-        if list_type == 'none':
-            if user_relation:
-                old_list_type = user_relation.list_type
-                user_relation.delete()
-                print(f"Removed book from list: {old_list_type}")
-                return JsonResponse({
-                    'status': 'success',
-                    'message': f'Книга удалена из списка "{list_type_display[old_list_type]}"',
-                    'action': 'removed'
-                })
-            print("Book was not in any list")
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Книга не находилась ни в одном списке',
-                'action': 'none'
-            })
-
-        # Обработка добавления/изменения списка
-        if user_relation:
-            if user_relation.list_type == list_type:
-                # Если книга уже в этом списке, удаляем её оттуда
-                user_relation.delete()
-                print(f"Removed book from list: {list_type}")
-                return JsonResponse({
-                    'status': 'success',
-                    'message': f'Книга удалена из списка "{list_type_display[list_type]}"',
-                    'action': 'removed'
-                })
-            else:
-                # Если книга в другом списке, обновляем тип
-                old_list_type = user_relation.list_type
-                user_relation.list_type = list_type
-                user_relation.save()
-                print(f"Moved book from {old_list_type} to {list_type}")
-                return JsonResponse({
-                    'status': 'success',
-                    'message': f'Книга перемещена из "{list_type_display[old_list_type]}" в "{list_type_display[list_type]}"',
-                    'action': 'moved'
-                })
-        else:
-            # Создаем новую связь
-            UserBookRelation.objects.create(
-                user=request.user,
-                book=book,
-                list_type=list_type
-            )
-            print(f"Added book to list: {list_type}")
-            return JsonResponse({
-                'status': 'success',
-                'message': f'Книга добавлена в список "{list_type_display[list_type]}"',
-                'action': 'added'
-            })
-            
-    except Exception as e:
-        import traceback
-        print(f"Error in add_to_list: {str(e)}")
-        print(traceback.format_exc())
-        return JsonResponse({
-            'status': 'error',
-            'message': f'Произошла ошибка при обработке запроса: {str(e)}'
-        }, status=500)
-
-def download_cover_from_openlibrary(cover_id):
-    """Загрузка обложки книги из OpenLibrary"""
-    if not cover_id:
-        return None
-        
-    url = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
-    try:
-        response = requests.get(url, stream=True)
-        if response.status_code == 200:
-            # Проверяем, что это действительно изображение
-            content_type = response.headers.get('content-type', '')
-            if not content_type.startswith('image'):
-                return None
-                
-            # Создаем временный файл
-            img_temp = NamedTemporaryFile(delete=True)
-            img_temp.write(response.content)
-            img_temp.flush()
-            
-            return img_temp
-    except requests.RequestException:
-        return None
-    return None
+    
+    context = {
+        'book': book,
+        'user_book_relation': user_relation,
+        'reviews': book.reviews.select_related('user').order_by('-created_at'),
+        'quotes': book.quotes.select_related('user').order_by('-created_at')
+    }
+    
+    return render(request, 'books/detail.html', context)
 
 @login_required
-def add_review(request, book_id):
-    """Добавление отзыва к книге"""
+def moderator_messages(request):
+    """Страница сообщений от модератора"""
+    # Получаем все сообщения пользователя
+    messages = ModeratorMessage.objects.filter(user=request.user)
+    
+    # Помечаем все непрочитанные сообщения как прочитанные
+    unread_messages = messages.filter(is_read=False)
+    if unread_messages.exists():
+        unread_messages.update(is_read=True)
+    
+    # Группируем сообщения по типам
+    context = {
+        'approved_books': messages.filter(message_type='book_approved'),
+        'rejected_books': messages.filter(message_type='book_rejected'),
+        'general_messages': messages.filter(message_type='general'),
+    }
+    
+    return render(request, 'books/moderator_messages.html', context)
+
+@login_required
+def edit_book(request, book_id):
+    """Редактирование книги"""
+    book = get_object_or_404(Book, id=book_id)
+    
+    # Проверяем права на редактирование
+    if book.submitted_by != request.user and not request.user.is_staff:
+        messages.error(request, 'У вас нет прав на редактирование этой книги')
+        return redirect('books:detail', book_id=book.id)
+    
     if request.method == 'POST':
-        try:
-            book = get_object_or_404(Book, id=book_id)
+        form = BookForm(request.POST, request.FILES, instance=book)
+        if form.is_valid():
+            book = form.save(commit=False)
+            book.needs_moderation = True  # Отправляем на повторную модерацию
+            book.save()
+            form.save_m2m()  # Сохраняем связи many-to-many
             
-            # Проверяем, не оставлял ли пользователь уже отзыв
-            existing_review = Review.objects.filter(user=request.user, book=book).first()
-            if existing_review:
-                messages.warning(request, 'Вы уже оставляли отзыв к этой книге')
-                return redirect('books:detail', book_id=book_id)
-            
-            # Получаем данные из формы
-            rating = int(request.POST.get('rating', 0))
-            comment = request.POST.get('text', '').strip()
-            
-            # Проверяем валидность данных
-            if not (1 <= rating <= 5):
-                messages.error(request, 'Оценка должна быть от 1 до 5')
-                return redirect('books:detail', book_id=book_id)
-            
-            if not comment:
-                messages.error(request, 'Текст отзыва не может быть пустым')
-                return redirect('books:detail', book_id=book_id)
-            
-            # Создаем отзыв
-            Review.objects.create(
-                user=request.user,
-                book=book,
-                rating=rating,
-                comment=comment
-            )
-            
-            messages.success(request, 'Отзыв успешно добавлен')
-            
-        except Exception as e:
-            messages.error(request, f'Произошла ошибка при добавлении отзыва: {str(e)}')
-        
+            messages.success(request, 'Книга успешно обновлена и отправлена на модерацию')
+            return redirect('books:detail', book_id=book.id)
+    else:
+        form = BookForm(instance=book)
+    
+    return render(request, 'books/edit_book.html', {
+        'form': form,
+        'book': book
+    })
+
+@login_required
+def delete_book(request, book_id):
+    """Удаление книги"""
+    book = get_object_or_404(Book, id=book_id)
+    
+    # Проверяем права на удаление
+    if book.submitted_by != request.user and not request.user.is_staff:
+        messages.error(request, 'У вас нет прав на удаление этой книги')
+        return redirect('books:detail', book_id=book.id)
+    
+    if request.method == 'POST':
+        book.delete()
+        messages.success(request, 'Книга успешно удалена')
+        return redirect('books:catalog')
+    
+    return render(request, 'books/delete_book.html', {'book': book})
+
+@login_required
+def edit_quote(request, quote_id):
+    """Редактирование цитаты"""
+    quote = get_object_or_404(Quote, id=quote_id)
+    
+    # Проверяем права на редактирование
+    if quote.user != request.user:
+        messages.error(request, 'У вас нет прав на редактирование этой цитаты')
+        return redirect('books:detail', book_id=quote.book.id)
+    
+    if request.method == 'POST':
+        form = QuoteForm(request.POST, instance=quote)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Цитата успешно обновлена')
+            return redirect('books:detail', book_id=quote.book.id)
+    else:
+        form = QuoteForm(instance=quote)
+    
+    return render(request, 'books/edit_quote.html', {
+        'form': form,
+        'quote': quote
+    })
+
+@login_required
+def delete_quote(request, quote_id):
+    """Удаление цитаты"""
+    quote = get_object_or_404(Quote, id=quote_id)
+    
+    # Проверяем права на удаление
+    if quote.user != request.user:
+        messages.error(request, 'У вас нет прав на удаление этой цитаты')
+        return redirect('books:detail', book_id=quote.book.id)
+    
+    if request.method == 'POST':
+        book_id = quote.book.id
+        quote.delete()
+        messages.success(request, 'Цитата успешно удалена')
         return redirect('books:detail', book_id=book_id)
     
-    return redirect('books:detail', book_id=book_id)
+    return render(request, 'books/delete_quote.html', {'quote': quote})
 
-def search_books(request):
-    query = request.GET.get('q', '')
-    genre = request.GET.get('genre', '')
-    ordering = request.GET.get('ordering', 'title')
+@login_required
+def edit_review(request, review_id):
+    """Редактирование отзыва"""
+    review = get_object_or_404(Review, id=review_id)
     
-    books = Book.objects.all()
-    no_results = False
+    # Проверяем права на редактирование
+    if review.user != request.user:
+        messages.error(request, 'У вас нет прав на редактирование этого отзыва')
+        return redirect('books:detail', book_id=review.book.id)
     
-    if query:
-        books = books.filter(
-            Q(title__icontains=query) |
-            Q(authors__name__icontains=query) |
-            Q(genre__icontains=query) |
-            Q(description__icontains=query)
-        ).distinct()
-        no_results = not books.exists()
+    if request.method == 'POST':
+        form = ReviewForm(request.POST, instance=review)
+        if form.is_valid():
+            form.save()
+            
+            # Обновляем рейтинг книги
+            book = review.book
+            book.site_rating = book.reviews.aggregate(Avg('rating'))['rating__avg']
+            book.save()
+            
+            messages.success(request, 'Отзыв успешно обновлен')
+            return redirect('books:detail', book_id=review.book.id)
+    else:
+        form = ReviewForm(instance=review)
     
-    if genre:
-        books = books.filter(genre=genre)
+    return render(request, 'books/edit_review.html', {
+        'form': form,
+        'review': review
+    })
+
+@login_required
+def delete_review(request, review_id):
+    """Удаление отзыва"""
+    review = get_object_or_404(Review, id=review_id)
     
-    # Применяем сортировку
-    if ordering == '-published_date':
-        books = books.order_by('-published_date')
-    elif ordering == 'published_date':
-        books = books.order_by('published_date')
-    elif ordering == 'rating':
-        books = books.order_by('-average_rating')
-    elif ordering == 'popularity':
-        books = books.order_by('-views_count')
-    else:  # default sorting by title
-        books = books.order_by('title')
+    # Проверяем права на удаление
+    if review.user != request.user:
+        messages.error(request, 'У вас нет прав на удаление этого отзыва')
+        return redirect('books:detail', book_id=review.book.id)
+    
+    if request.method == 'POST':
+        book = review.book
+        review.delete()
+        
+        # Обновляем рейтинг книги
+        book.site_rating = book.reviews.aggregate(Avg('rating'))['rating__avg']
+        book.save()
+        
+        messages.success(request, 'Отзыв успешно удален')
+        return redirect('books:detail', book_id=book.id)
+    
+    return render(request, 'books/delete_review.html', {'review': review})
+
+@login_required
+def add_quote_from_quotes_page(request):
+    """Добавление цитаты со страницы цитат"""
+    if request.method == 'POST':
+        form = QuoteForm(request.POST)
+        book_id = request.POST.get('book')
+        
+        if form.is_valid() and book_id:
+            quote = form.save(commit=False)
+            quote.book = get_object_or_404(Book, id=book_id)
+            quote.user = request.user
+            quote.save()
+            
+            messages.success(request, 'Цитата успешно добавлена')
+            return redirect('books:user_quotes')
+        
+        messages.error(request, 'Ошибка при добавлении цитаты')
+        return redirect('books:user_quotes')
+    
+    # Получаем список книг пользователя для выбора
+    user_books = Book.objects.filter(
+        user_relations__user=request.user
+    ).distinct().order_by('title')
+    
+    context = {
+        'form': QuoteForm(),
+        'user_books': user_books
+    }
+    return render(request, 'lib/add_quote.html', context)
+
+@login_required
+def user_collections(request):
+    """Страница пользовательских подборок"""
+    user_collections = Collection.objects.filter(
+        created_by=request.user
+    ).prefetch_related('books').order_by('-created_at')
+    
+    # Если это AJAX-запрос, возвращаем JSON
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        collections_data = [{
+            'id': collection.id,
+            'title': collection.title,
+            'slug': collection.slug,
+            'books_count': collection.books_count,
+            'type': collection.get_type_display(),
+            'is_public': collection.is_public,
+        } for collection in user_collections]
+        return JsonResponse({'collections': collections_data})
+    
+    # Для обычных запросов возвращаем HTML
+    context = {
+        'user_collections': user_collections,
+        'collection_types': Collection.COLLECTION_TYPES,
+    }
+    return render(request, 'books/collections/user_collections.html', context)
+
+@login_required
+def delete_collection(request, slug):
+    """Удаление подборки"""
+    collection = get_object_or_404(Collection, slug=slug, created_by=request.user)
+    
+    if request.method == 'POST':
+        collection.delete()
+        messages.success(request, f'Подборка "{collection.title}" успешно удалена')
+        return redirect('books:user_collections')
+    
+    return render(request, 'books/collections/delete.html', {'collection': collection})
+
+def author_detail(request, author_id):
+    """Детальная страница автора"""
+    author = get_object_or_404(Author, id=author_id)
+    
+    # Получаем все книги автора
+    books = Book.objects.filter(
+        authors=author,
+        is_approved=True
+    ).select_related('submitted_by').prefetch_related('reviews').order_by('-published_date')
     
     # Пагинация
     paginator = Paginator(books, 12)  # 12 книг на странице
     page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    books = paginator.get_page(page_number)
     
     context = {
-        'books': page_obj,
-        'query': query,
-        'selected_genre': genre,
-        'selected_ordering': ordering,
-        'GENRE_CHOICES': Book.GENRE_CHOICES,
-        'no_results': no_results
+        'author': author,
+        'books': books,
     }
     
-    return render(request, 'books/catalog.html', context)
+    return render(request, 'books/author_detail.html', context)
+
+def popular_books(request):
+    """Страница популярных книг"""
+    books = Book.objects.filter(
+        is_approved=True
+    ).annotate(
+        readers_count=Count('user_relations', distinct=True)
+    ).filter(
+        readers_count__gte=1  # Минимум 1 читатель
+    ).order_by('-readers_count')[:100]
+    
+    context = {
+        'books': books,
+        'title': 'Топ-100 популярных книг',
+        'description': 'Книги, которые чаще всего добавляют в библиотеку'
+    }
+    return render(request, 'books/collections/books_list.html', context)
+
+def top_rated_books(request):
+    """Страница книг с лучшим рейтингом"""
+    books = Book.objects.filter(
+        is_approved=True
+    ).annotate(
+        avg_rating=Avg('reviews__rating'),
+        reviews_count=Count('reviews')
+    ).filter(
+        avg_rating__gte=4.0,
+        reviews_count__gte=3  # Минимум 3 отзыва для объективности
+    ).order_by('-avg_rating', '-reviews_count')[:100]
+    
+    context = {
+        'books': books,
+        'title': 'Топ-100 книг по рейтингу',
+        'description': 'Книги с самым высоким рейтингом на сайте'
+    }
+    return render(request, 'books/collections/books_list.html', context)

@@ -265,19 +265,83 @@
                     {% endif %}
                 </div>
                 <div class="card-footer bg-transparent">
-                    <form method="post" action="{% url 'books:add_from_openlibrary' %}">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" 
+                            data-bs-target="#addBookModal{{ forloop.counter }}">
+                        Добавить в библиотеку
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для добавления книги -->
+        <div class="modal fade" id="addBookModal{{ forloop.counter }}" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Добавление книги "{{ book.title }}"</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{% url 'books:add_from_openlibrary' %}" method="post">
                         {% csrf_token %}
-                        <input type="hidden" name="title" value="{{ book.title }}">
-                        <input type="hidden" name="author" value="{{ book.author_name.0|default:'Неизвестен' }}">
-                        {% if book.first_publish_year %}
-                        <input type="hidden" name="first_publish_year" value="{{ book.first_publish_year }}">
-                        {% endif %}
-                        {% if book.cover_i %}
-                        <input type="hidden" name="cover_i" value="{{ book.cover_i }}">
-                        {% endif %}
-                        <button type="submit" class="btn btn-primary btn-sm w-100">
-                            <i class="fas fa-plus"></i> Добавить в библиотеку
-                        </button>
+                        <div class="modal-body">
+                            <input type="hidden" name="title" value="{{ book.title }}">
+                            {% for author in book.author_name %}
+                            <input type="hidden" name="author" value="{{ author }}">
+                            {% endfor %}
+                            <input type="hidden" name="first_publish_year" value="{{ book.first_publish_year }}">
+                            <input type="hidden" name="cover_i" value="{{ book.cover_i }}">
+                            
+                            <!-- Предпросмотр данных -->
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    {% if book.cover_i %}
+                                    <img src="https://covers.openlibrary.org/b/id/{{ book.cover_i }}-M.jpg" 
+                                         class="img-fluid" alt="{{ book.title }}">
+                                    {% else %}
+                                    <div class="no-cover">Нет обложки</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-8">
+                                    <h4>{{ book.title }}</h4>
+                                    <p><strong>Автор(ы):</strong> 
+                                        {% for author in book.author_name %}
+                                        {{ author }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </p>
+                                    {% if book.first_publish_year %}
+                                    <p><strong>Год публикации:</strong> {{ book.first_publish_year }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Выбор жанра -->
+                            <div class="mb-3">
+                                <label for="genre" class="form-label">Жанр</label>
+                                <select name="genre" id="genre" class="form-select" required>
+                                    <option value="">Выберите жанр</option>
+                                    {% for code, name in GENRE_CHOICES %}
+                                    <option value="{{ code }}">{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Комментарии для модератора -->
+                            <div class="mb-3">
+                                <label for="user_comments" class="form-label">
+                                    Комментарии для модератора
+                                    <small class="text-muted">(необязательно)</small>
+                                </label>
+                                <textarea name="user_comments" id="user_comments" class="form-control" 
+                                          rows="3" placeholder="Укажите ваши пожелания по изменению информации о книге (например, замена обложки, исправление описания и т.д.)"></textarea>
+                                <div class="form-text">
+                                    Модератор рассмотрит ваши комментарии при проверке книги.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                            <button type="submit" class="btn btn-primary">Добавить книгу</button>
+                        </div>
                     </form>
                 </div>
             </div>

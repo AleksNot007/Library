@@ -1,167 +1,21 @@
 {% extends 'base.html' %}
 {% load book_tags %}
 
-{% block title %}Подборки книг — Личная библиотека{% endblock %}
+{% block title %}Подборки книг{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Подборки книг</h1>
-
-    {% if top_rated_books %}
-    <section class="mb-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="h3">Топ-100 книг по рейтингу</h2>
-            <a href="{% url 'books:collection_detail' collection_type='top_rated' %}" class="btn btn-outline-primary">
-                Смотреть все <i class="fas fa-arrow-right"></i>
-            </a>
-        </div>
-        <div class="row">
-            {% for book in top_rated_books|slice:":4" %}
-            <div class="col-md-3 mb-4">
-                <div class="card h-100">
-                    {% if book.cover %}
-                    <img src="{{ book.cover.url }}" class="card-img-top" alt="{{ book.title }}" style="height: 300px; object-fit: cover;">
-                    {% else %}
-                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
-                        <i class="fas fa-book fa-3x text-muted"></i>
-                    </div>
-                    {% endif %}
+    <!-- Подборки по жанрам -->
+    <section class="categories-section mb-5">
+        <h2 class="section-title">КАТЕГОРИИ</h2>
+        <div class="categories-slider">
+            {% for genre_code, genre_books in genre_top_books.items %}
+            <div class="category-card">
+                <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">{{ book.title }}</h5>
-                        <p class="card-text">
-                            {% for author in book.authors.all %}
-                            {{ author.name }}{% if not forloop.last %}, {% endif %}
-                            {% endfor %}
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge bg-success">
-                                <i class="fas fa-star"></i> {{ book.avg_rating|floatformat:1 }}
-                            </span>
-                            <small class="text-muted">{{ book.reviews_count }} отзывов</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </section>
-    {% endif %}
-
-    {% if popular_books %}
-    <section class="mb-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="h3">Самые популярные книги</h2>
-            <a href="{% url 'books:collection_detail' collection_type='popular' %}" class="btn btn-outline-primary">
-                Смотреть все <i class="fas fa-arrow-right"></i>
-            </a>
-        </div>
-        <div class="row">
-            {% for book in popular_books|slice:":4" %}
-            <div class="col-md-3 mb-4">
-                <div class="card h-100">
-                    {% if book.cover %}
-                    <img src="{{ book.cover.url }}" class="card-img-top" alt="{{ book.title }}" style="height: 300px; object-fit: cover;">
-                    {% else %}
-                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
-                        <i class="fas fa-book fa-3x text-muted"></i>
-                    </div>
-                    {% endif %}
-                    <div class="card-body">
-                        <h5 class="card-title">{{ book.title }}</h5>
-                        <p class="card-text">
-                            {% for author in book.authors.all %}
-                            {{ author.name }}{% if not forloop.last %}, {% endif %}
-                            {% endfor %}
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge bg-primary">
-                                <i class="fas fa-users"></i> {{ book.readers_count }}
-                            </span>
-                            <small class="text-muted">читателей</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </section>
-    {% endif %}
-
-    {% if most_added_books %}
-    <section class="mb-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="h3">Часто добавляемые книги</h2>
-            <a href="{% url 'books:collection_detail' collection_type='most_added' %}" class="btn btn-outline-primary">
-                Смотреть все <i class="fas fa-arrow-right"></i>
-            </a>
-        </div>
-        <div class="row">
-            {% for book in most_added_books|slice:":4" %}
-            <div class="col-md-3 mb-4">
-                <div class="card h-100">
-                    {% if book.cover %}
-                    <img src="{{ book.cover.url }}" class="card-img-top" alt="{{ book.title }}" style="height: 300px; object-fit: cover;">
-                    {% else %}
-                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
-                        <i class="fas fa-book fa-3x text-muted"></i>
-                    </div>
-                    {% endif %}
-                    <div class="card-body">
-                        <h5 class="card-title">{{ book.title }}</h5>
-                        <p class="card-text">
-                            {% for author in book.authors.all %}
-                            {{ author.name }}{% if not forloop.last %}, {% endif %}
-                            {% endfor %}
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge bg-info">
-                                <i class="fas fa-plus"></i> {{ book.total_adds }}
-                            </span>
-                            <small class="text-muted">добавлений</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </section>
-    {% endif %}
-
-    <section class="mb-5">
-        <h2 class="h3 mb-4">Топ-100 по жанрам</h2>
-        <div class="row">
-            {% for genre_code, books in genre_top_books.items %}
-            <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h3 class="h5 card-title">{{ dict|get_item:genre_code }}</h3>
-                        {% if books %}
-                        <ul class="list-unstyled">
-                            {% for book in books|slice:":5" %}
-                            <li class="mb-2">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <a href="{% url 'books:detail' book.id %}" class="text-decoration-none">
-                                            {{ book.title }}
-                                        </a>
-                                        <small class="text-muted d-block">
-                                            {% for author in book.authors.all %}
-                                            {{ author.name }}{% if not forloop.last %}, {% endif %}
-                                            {% endfor %}
-                                        </small>
-                                    </div>
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-star"></i> {{ book.avg_rating|floatformat:1 }}
-                                    </span>
-                                </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <p class="text-muted">В этом жанре пока нет книг с высоким рейтингом</p>
-                        {% endif %}
-                        <a href="{% url 'books:genre_collection_detail' genre=genre_code %}" class="btn btn-outline-primary btn-sm w-100">
-                            Смотреть все <i class="fas fa-arrow-right"></i>
+                        <h3>{{ dict|get_item:genre_code }}</h3>
+                        <a href="{% url 'books:genre_collection_detail' genre=genre_code %}" class="category-link">
+                            Узнать больше
                         </a>
                     </div>
                 </div>
@@ -169,5 +23,163 @@
             {% endfor %}
         </div>
     </section>
+
+    <!-- Популярные книги -->
+    <section class="mb-5">
+        <h2>Популярные книги</h2>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Топ-100 популярных книг</h5>
+                        <p class="card-text">Книги, которые чаще всего добавляют в библиотеку</p>
+                        <a href="{% url 'books:popular_books' %}" class="btn btn-outline-primary">
+                            Смотреть подборку
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Лучшие по рейтингу -->
+    <section class="mb-5">
+        <h2>Лучшие по рейтингу</h2>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Топ-100 по рейтингу</h5>
+                        <p class="card-text">Книги с самым высоким рейтингом на сайте</p>
+                        <a href="{% url 'books:top_rated_books' %}" class="btn btn-outline-primary">
+                            Смотреть подборку
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
+
+<style>
+.section-title {
+    color: #1a472a;
+    font-size: 2rem;
+    margin-bottom: 2rem;
+}
+
+.categories-slider {
+    display: flex;
+    overflow-x: auto;
+    gap: 1rem;
+    padding: 1rem 0;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: #1a472a #f0f0f0;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -1rem;
+    padding: 1rem;
+}
+
+.categories-slider::-webkit-scrollbar {
+    height: 8px;
+}
+
+.categories-slider::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 4px;
+}
+
+.categories-slider::-webkit-scrollbar-thumb {
+    background-color: #1a472a;
+    border-radius: 4px;
+}
+
+.category-card {
+    flex: 0 0 auto;
+    width: 300px;
+    scroll-snap-align: start;
+}
+
+.category-card .card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    height: 100%;
+    background: linear-gradient(45deg, #1a472a, #2a573a);
+}
+
+.category-card .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.category-card .card-body {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.category-card h3 {
+    color: white;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.category-link {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: inline-block;
+}
+
+.category-link:hover {
+    background: white;
+    color: #1a472a;
+    border-color: white;
+}
+
+/* Стили для остальных карточек */
+section:not(.categories-section) .card {
+    background: white;
+}
+
+section:not(.categories-section) .card-title {
+    color: #1a472a;
+    margin-bottom: 1rem;
+}
+
+section:not(.categories-section) .card-text {
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+section:not(.categories-section) .btn-outline-primary {
+    color: #1a472a;
+    border-color: #1a472a;
+}
+
+section:not(.categories-section) .btn-outline-primary:hover {
+    background-color: #1a472a;
+    border-color: #1a472a;
+    color: white;
+}
+
+h2 {
+    color: #1a472a;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .category-card {
+        width: 260px;
+    }
+    
+    .category-card h3 {
+        font-size: 1.25rem;
+    }
+}
+</style>
 {% endblock %} 

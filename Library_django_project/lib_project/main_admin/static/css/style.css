@@ -25,110 +25,87 @@
   header {
     background-color: #fff;
     border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 40px;
+    padding: 1rem 2rem;
     position: sticky;
     top: 0;
     z-index: 999;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   }
   
   .logo {
-    font-size: 20px;
+    font-size: 1.5rem;
     font-weight: bold;
     color: var(--accent-color);
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    white-space: nowrap;
   }
   
   nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 0;
+    margin-top: 0.5rem;
   }
   
   .main-nav, .user-nav {
+    display: flex;
     list-style: none;
     margin: 0;
     padding: 0;
-    display: flex;
-    gap: 2rem;
+    gap: 1rem;
   }
   
-  .main-nav a, .user-nav a {
+  .nav-link {
     text-decoration: none;
-    color: #333;
+    color: var(--nav-text-color);
     font-weight: 500;
-    transition: color 0.3s ease;
-  }
-  
-  .main-nav a:hover, .user-nav a:hover {
-    color: #007bff;
-  }
-  
-  .user-nav {
-    margin-left: auto;
-  }
-  
-  .user-nav li {
-    position: relative;
-  }
-  
-  /* Кнопки входа/регистрации */
-  .user-nav a[href*="login"],
-  .user-nav a[href*="register"] {
     padding: 0.5rem 1rem;
     border-radius: 4px;
-  }
-  
-  .user-nav a[href*="login"] {
-    background-color: #007bff;
-    color: white;
-  }
-  
-  .user-nav a[href*="register"] {
-    border: 1px solid #007bff;
-    color: #007bff;
-  }
-  
-  .user-nav a[href*="login"]:hover {
-    background-color: #0056b3;
-  }
-  
-  .user-nav a[href*="register"]:hover {
-    background-color: #007bff;
-    color: white;
-  }
-  
-  .search-bar {
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
   }
   
-  .search-bar input[type="text"] {
-    padding: 6px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    font-size: 14px;
-    width: 200px;
+  .nav-link i {
+    font-size: 1rem;
+    opacity: 0.8;
   }
   
-  .search-bar button {
-    padding: 6px 12px;
-    border: none;
-    border-radius: var(--border-radius);
+  .nav-link:hover {
+    background-color: rgba(76, 42, 42, 0.05);
+    color: var(--accent-color);
+  }
+  
+  .nav-link:hover i {
+    opacity: 1;
+  }
+  
+  /* Стили для бейджа непрочитанных сообщений */
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.25em 0.6em;
+    margin-left: 5px;
+    vertical-align: middle;
+    border-radius: 10px;
+  }
+  
+  /* Стили для кнопок входа/регистрации */
+  .user-nav .nav-link[href*="login"] {
     background-color: var(--accent-color);
-    color: #fff;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+    color: white;
   }
   
-  .search-bar button:hover {
+  .user-nav .nav-link[href*="register"] {
+    border: 1px solid var(--accent-color);
+  }
+  
+  .user-nav .nav-link[href*="login"]:hover {
     background-color: #5c3636;
+  }
+  
+  .user-nav .nav-link[href*="register"]:hover {
+    background-color: var(--accent-color);
+    color: white;
   }
   
   /* Основной контент */
@@ -621,4 +598,73 @@
     display: inline-block;
     margin: 0 10px;
     color: #666;
+  }
+  
+  /* Стили для формы поиска в шапке */
+  .search-form {
+    margin-left: auto;
+    margin-right: 20px;
+    min-width: 400px;
+  }
+  
+  .search-form .form-control {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 8px 15px;
+    width: 100%;
+  }
+  
+  .search-form .btn {
+    padding: 8px 15px;
+    margin-left: 5px;
+  }
+  
+  .search-form .btn-primary {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+  }
+  
+  .search-form .btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+  }
+  
+  .search-form .btn-outline-success {
+    color: #28a745;
+    border-color: #28a745;
+  }
+  
+  .search-form .btn-outline-success:hover {
+    color: #fff;
+    background-color: #28a745;
+    border-color: #28a745;
+  }
+  
+  /* Адаптивность для мобильных устройств */
+  @media (max-width: 992px) {
+    header {
+        padding: 1rem;
+    }
+
+    nav {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .main-nav, .user-nav {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .nav-link {
+        justify-content: center;
+    }
+
+    .user-nav {
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--border-color);
+    }
   } 

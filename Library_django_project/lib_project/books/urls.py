@@ -1,29 +1,43 @@
 from django.urls import path
 from . import views
-from django.http import JsonResponse
-from .models import Book
-
-def check_book(request, book_id):
-    exists = Book.objects.filter(id=book_id).exists()
-    return JsonResponse({'exists': exists, 'book_id': book_id})
 
 app_name = 'books'
 
 urlpatterns = [
-    path('check-book/<int:book_id>/', check_book, name='check_book'),  # Временный URL для проверки
-    path('catalog/', views.catalog, name='catalog'),  # Общий каталог всех книг
-    path('my-library/', views.user_library, name='user_library'),  # Личная библиотека пользователя
+    path('check-book/<int:book_id>/', views.check_book, name='check_book'),
+    path('catalog/', views.catalog, name='catalog'),
+    path('my-library/', views.user_library, name='user_library'),
     path('my-reviews/', views.user_reviews, name='user_reviews'),
     path('my-quotes/', views.user_quotes, name='user_quotes'),
-    path('blacklist/', views.user_blacklist, name='user_blacklist'),
-    path('book/<int:book_id>/', views.book_detail, name='detail'),
-    path('book/<int:book_id>/add-review/', views.add_review, name='add_review'),  # Новый URL для добавления отзыва
+    path('my-collections/', views.user_collections, name='user_collections'),
     path('collections/', views.collections_list, name='collections_list'),
-    path('collections/genre/<str:genre>/', views.collection_detail, {'collection_type': 'genre'}, name='genre_collection_detail'),
-    path('collections/<str:collection_type>/', views.collection_detail, name='collection_detail'),
-    path('search/', views.search_books, name='search'),
-    path('openlibrary/search/', views.search_openlibrary, name='openlibrary_search'),
-    path('openlibrary/add/', views.add_book_from_openlibrary, name='add_from_openlibrary'),
-    path('book/add/', views.add_book, name='add_book'),  # URL для ручного добавления книги
-    path('book/<int:book_id>/add-to-list/<str:list_type>/', views.add_to_list, name='add_to_list'),  # Новый URL
+    path('collections/create/', views.create_collection, name='create_collection'),
+    path('collections/genre/<str:genre>/', views.genre_collection_detail, name='genre_collection_detail'),
+    path('collections/popular/', views.popular_books, name='popular_books'),
+    path('collections/top-rated/', views.top_rated_books, name='top_rated_books'),
+    path('collections/<slug:slug>/', views.collection_detail, name='collection_detail'),
+    path('collections/<slug:slug>/edit/', views.edit_collection, name='edit_collection'),
+    path('collections/<slug:slug>/delete/', views.delete_collection, name='delete_collection'),
+    path('collections/<slug:slug>/add-book/<int:book_id>/', views.add_book_to_collection, name='add_book_to_collection'),
+    path('collections/<slug:slug>/remove-book/<int:book_id>/', views.remove_book_from_collection, name='remove_book_from_collection'),
+    path('blacklist/', views.user_blacklist, name='user_blacklist'),
+    path('messages/', views.moderator_messages, name='moderator_messages'),
+    path('book/<int:book_id>/', views.book_detail, name='detail'),
+    path('book/<int:book_id>/add-review/', views.add_review, name='add_review'),
+    path('search/', views.catalog, name='search'),
+    path('openlibrary-search/', views.openlibrary_search, name='openlibrary_search'),
+    path('openlibrary/add/', views.add_from_openlibrary, name='add_from_openlibrary'),
+    path('book/add/', views.add_book, name='add_book'),
+    path('book/<int:book_id>/edit/', views.edit_book, name='edit_book'),
+    path('book/<int:book_id>/delete/', views.delete_book, name='delete_book'),
+    path('book/<int:book_id>/update-progress/', views.update_progress, name='update_progress'),
+    path('book/<int:book_id>/update-notes/', views.update_notes, name='update_notes'),
+    path('book/<int:book_id>/add-to-list/<str:list_type>/', views.add_to_list, name='add_to_list'),
+    path('book/<int:book_id>/add-quote/', views.add_quote, name='add_quote'),
+    path('quote/<int:quote_id>/edit/', views.edit_quote, name='edit_quote'),
+    path('quote/<int:quote_id>/delete/', views.delete_quote, name='delete_quote'),
+    path('review/<int:review_id>/edit/', views.edit_review, name='edit_review'),
+    path('review/<int:review_id>/delete/', views.delete_review, name='delete_review'),
+    path('quotes/add/', views.add_quote_from_quotes_page, name='add_quote_from_quotes_page'),
+    path('author/<int:author_id>/', views.author_detail, name='author_detail'),
 ]

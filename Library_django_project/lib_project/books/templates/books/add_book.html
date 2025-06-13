@@ -84,22 +84,22 @@
         <p>Заполните информацию о книге, которую хотите добавить в библиотеку</p>
     </div>
 
-    <form method="post" enctype="multipart/form-data" action="{% url 'books:add_book' %}">
+    <form method="post" enctype="multipart/form-data" action="{% url 'books:add_book' %}" accept-charset="utf-8">
         {% csrf_token %}
         
         <div class="form-group">
             <label for="title">Название книги*</label>
-            <input type="text" id="title" name="title" required>
+            <input type="text" id="title" name="title" required class="form-control">
         </div>
 
         <div class="form-group">
             <label for="author">Автор*</label>
-            <input type="text" id="author" name="author" required>
+            <input type="text" id="author" name="author" required class="form-control">
         </div>
 
         <div class="form-group">
             <label for="genre">Жанр*</label>
-            <select id="genre" name="genre" required>
+            <select id="genre" name="genre" required class="form-control">
                 {% for code, name in GENRE_CHOICES %}
                     <option value="{{ code }}">{{ name }}</option>
                 {% endfor %}
@@ -108,17 +108,38 @@
 
         <div class="form-group">
             <label for="description">Описание</label>
-            <textarea id="description" name="description"></textarea>
+            <textarea id="description" name="description" class="form-control"></textarea>
         </div>
 
         <div class="form-group">
             <label for="published_date">Год публикации</label>
-            <input type="number" id="published_date" name="published_date" min="1" max="{% now 'Y' %}">
+            <input type="number" 
+                   id="published_date" 
+                   name="published_date" 
+                   min="1" 
+                   max="{% now 'Y' %}" 
+                   placeholder="Например: 1984"
+                   class="form-control"
+                   pattern="\d{4}"
+                   title="Введите год в формате ГГГГ (например: 1984)">
+            <small class="form-text text-muted">Введите только год публикации (например: 1984)</small>
+        </div>
+
+        <div class="form-group">
+            <label for="pages">Количество страниц</label>
+            <input type="number" 
+                   id="pages" 
+                   name="pages" 
+                   min="1"
+                   placeholder="Например: 248"
+                   class="form-control"
+                   title="Введите количество страниц">
+            <small class="form-text text-muted">Укажите общее количество страниц в книге</small>
         </div>
 
         <div class="form-group">
             <label for="cover">Обложка книги</label>
-            <input type="file" id="cover" name="cover" accept="image/*">
+            <input type="file" id="cover" name="cover" accept="image/*" class="form-control">
         </div>
 
         <div class="form-actions">
@@ -126,4 +147,18 @@
         </div>
     </form>
 </div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Отправка...';
+    });
+});
+</script>
+{% endblock %}
+
 {% endblock %} 

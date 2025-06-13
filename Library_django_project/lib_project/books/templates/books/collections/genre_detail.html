@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load book_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <section class="genre-header mb-4">
+        <h1 class="section-title text-center">{{ title }}</h1>
+        <div class="genre-description text-center">
+            <p class="lead text-muted">Лучшие книги жанра {{ genre_display_name }} с рейтингом от 4.5</p>
+        </div>
+    </section>
+
+    <section class="books-grid mb-5">
+        <div class="row g-4">
+            {% for book in books %}
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="book-card">
+                    <a href="{% url 'books:detail' book.id %}" class="book-cover-link">
+                        {% if book.cover %}
+                        <img src="{{ book.cover.url }}" alt="{{ book.title }}" class="book-cover">
+                        {% else %}
+                        <div class="book-cover no-cover">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        {% endif %}
+                    </a>
+                    <div class="book-info text-center">
+                        <h5 class="book-title">
+                            <a href="{% url 'books:detail' book.id %}">{{ book.title }}</a>
+                        </h5>
+                        <div class="book-authors">
+                            {% for author in book.authors.all %}
+                            <a href="#" class="author-link">{{ author.name }}</a>{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="book-progress">
+                            <span class="text-muted">0 из 1 стр.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    {% if books.has_other_pages %}
+    <nav aria-label="Навигация по страницам" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if books.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ books.previous_page_number }}" aria-label="Предыдущая">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in books.paginator.page_range %}
+            <li class="page-item {% if books.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if books.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ books.next_page_number }}" aria-label="Следующая">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<style>
+.section-title {
+    color: #1a472a;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+.genre-description {
+    margin-bottom: 2rem;
+}
+
+.book-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem;
+    transition: transform 0.2s;
+}
+
+.book-card:hover {
+    transform: translateY(-5px);
+}
+
+.book-cover-link {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2/3;
+    margin-bottom: 0.75rem;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.book-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #f8f9fa;
+}
+
+.no-cover {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    color: #dee2e6;
+    font-size: 2rem;
+}
+
+.book-info {
+    width: 100%;
+}
+
+.book-title {
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+    line-height: 1.3;
+}
+
+.book-title a {
+    color: #2d2d2d;
+    text-decoration: none;
+}
+
+.book-title a:hover {
+    color: #1a472a;
+}
+
+.book-authors {
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+    color: #6c757d;
+}
+
+.author-link {
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.author-link:hover {
+    color: #1a472a;
+    text-decoration: underline;
+}
+
+.book-progress {
+    font-size: 0.8rem;
+}
+
+.pagination .page-link {
+    color: #1a472a;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #1a472a;
+    border-color: #1a472a;
+    color: white;
+}
+
+.pagination .page-link:hover {
+    color: white;
+    background-color: #2a573a;
+    border-color: #2a573a;
+}
+
+@media (max-width: 768px) {
+    .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .book-title {
+        font-size: 0.9rem;
+    }
+    
+    .book-authors {
+        font-size: 0.8rem;
+    }
+}
+</style>
+{% endblock %} 

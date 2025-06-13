@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ collection.title }} — Личная библиотека{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'books:user_collections' %}">Мои подборки</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ collection.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Информация о подборке -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                {% if collection.cover %}
+                    <img src="{{ collection.cover.url }}" class="card-img-top" alt="{{ collection.title }}" style="height: 300px; object-fit: cover;">
+                {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
+                        <i class="fas fa-book-open fa-4x text-muted"></i>
+                    </div>
+                {% endif %}
+                
+                <div class="card-body">
+                    <h1 class="card-title h3">{{ collection.title }}</h1>
+                    {% if collection.description %}
+                        <p class="card-text">{{ collection.description }}</p>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <span class="badge {% if collection.is_public %}bg-success{% else %}bg-secondary{% endif %}">
+                            {% if collection.is_public %}Публичная{% else %}Приватная{% endif %}
+                        </span>
+                        <span class="badge bg-info ms-1">{{ collection.get_type_display }}</span>
+                    </div>
+                    
+                    <p class="card-text">
+                        <small class="text-muted">
+                            <i class="fas fa-book"></i> {{ collection.books_count }} книг<br>
+                            <i class="fas fa-calendar"></i> Создана {{ collection.created_at|date:"d.m.Y" }}
+                        </small>
+                    </p>
+                    
+                    {% if collection.created_by == user or user.is_staff %}
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'books:edit_collection' collection.slug %}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit"></i> Редактировать
+                            </a>
+                            <a href="{% url 'books:delete_collection' collection.slug %}" class="btn btn-outline-danger">
+                                <i class="fas fa-trash"></i> Удалить
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Список книг -->
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Книги в подборке</h2>
+                {% if collection.created_by == user or user.is_staff %}
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBookModal">
+                        <i class="fas fa-plus"></i> Добавить книгу
+                    </button>
+                {% endif %}
+            </div>
+
+            {% if collection.books.exists %}
+                <div class="row">
+                    {% for book in collection.books.all %}
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="row g-0">
+                                    <div class="col-4">
+                                        {% if book.cover %}
+                                            <img src="{{ book.cover.url }}" class="img-fluid rounded-start" alt="{{ book.title }}" style="height: 200px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="bg-light d-flex align-items-center justify-content-center h-100">
+                                                <i class="fas fa-book fa-2x text-muted"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-8">
+                                        <div class="card-body">
+                                            <h5 class="card-title">
+                                                <a href="{% url 'books:detail' book.id %}" class="text-decoration-none text-dark">
+                                                    {{ book.title }}
+                                                </a>
+                                            </h5>
+                                            <p class="card-text">
+                                                <small class="text-muted">
+                                                    {% for author in book.authors.all %}
+                                                        {{ author.name }}{% if not forloop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </small>
+                                            </p>
+                                            {% if collection.created_by == user or user.is_staff %}
+                                                <button class="btn btn-sm btn-outline-danger remove-book" data-book-id="{{ book.id }}">
+                                                    <i class="fas fa-times"></i> Удалить
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-books fa-3x text-muted mb-3"></i>
+                    <h3>В этой подборке пока нет книг</h3>
+                    {% if collection.created_by == user or user.is_staff %}
+                        <p class="text-muted">Добавьте книги в свою подборку!</p>
+                        <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addBookModal">
+                            <i class="fas fa-plus"></i> Добавить книгу
+                        </button>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if collection.created_by == user or user.is_staff %}
+    <!-- Модальное окно для добавления книг -->
+    <div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addBookModalLabel">Добавить книги в подборку</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="bookSearch" placeholder="Поиск книг...">
+                    </div>
+                    <div id="bookSearchResults" class="list-group">
+                        <!-- Здесь будут результаты поиска -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% block extra_js %}
+<script>
+    // Функция для удаления книги из подборки
+    $('.remove-book').click(function() {
+        const bookId = $(this).data('book-id');
+        if (confirm('Вы уверены, что хотите удалить эту книгу из подборки?')) {
+            $.post(`{% url 'books:remove_book_from_collection' slug=collection.slug book_id=0 %}`.replace('0', bookId), {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            })
+            .done(function() {
+                location.reload();
+            })
+            .fail(function(response) {
+                alert(response.responseJSON.message || 'Произошла ошибка при удалении книги');
+            });
+        }
+    });
+
+    // Живой поиск книг
+    let searchTimeout;
+    $('#bookSearch').on('input', function() {
+        clearTimeout(searchTimeout);
+        const query = $(this).val();
+        
+        if (query.length < 2) {
+            $('#bookSearchResults').empty();
+            return;
+        }
+        
+        searchTimeout = setTimeout(function() {
+            $.get(`{% url 'books:search' %}?q=${query}`)
+                .done(function(response) {
+                    const results = $('#bookSearchResults');
+                    results.empty();
+                    
+                    response.books.forEach(function(book) {
+                        const item = $(`
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">${book.title}</h6>
+                                        <small class="text-muted">${book.authors.join(', ')}</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-primary add-book" data-book-id="${book.id}">
+                                        <i class="fas fa-plus"></i> Добавить
+                                    </button>
+                                </div>
+                            </div>
+                        `);
+                        
+                        item.find('.add-book').click(function() {
+                            const bookId = $(this).data('book-id');
+                            $.post(`{% url 'books:add_book_to_collection' slug=collection.slug book_id=0 %}`.replace('0', bookId), {
+                                'csrfmiddlewaretoken': '{{ csrf_token }}'
+                            })
+                            .done(function() {
+                                location.reload();
+                            })
+                            .fail(function(response) {
+                                alert(response.responseJSON.message || 'Произошла ошибка при добавлении книги');
+                            });
+                        });
+                        
+                        results.append(item);
+                    });
+                });
+        }, 300);
+    });
+</script>
+{% endblock %}
+
+<style>
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .btn-group .btn {
+        padding: .25rem .5rem;
+    }
+    
+    .badge {
+        font-size: 0.8rem;
+    }
+    
+    .list-group-item:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %} 

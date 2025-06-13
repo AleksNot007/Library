@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Сообщения от модератора{% endblock %}
+
+{% block extra_css %}
+<style>
+    .messages-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+
+    .message-section {
+        margin-bottom: 40px;
+    }
+
+    .message-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .message-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .message-date {
+        color: #666;
+        font-size: 0.9em;
+    }
+
+    .message-content {
+        margin-top: 10px;
+        white-space: pre-line;
+    }
+
+    .message-type {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        margin-right: 10px;
+    }
+
+    .type-approved {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .type-rejected {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .type-general {
+        background-color: #e2e3e5;
+        color: #383d41;
+    }
+
+    .section-title {
+        color: var(--accent-color);
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--accent-color);
+    }
+
+    .no-messages {
+        text-align: center;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="messages-container">
+    <h1 class="section-title">Сообщения от модератора</h1>
+
+    {% if approved_books or rejected_books or general_messages %}
+        {% if approved_books %}
+        <div class="message-section">
+            <h2>Одобренные книги</h2>
+            {% for message in approved_books %}
+            <div class="message-card">
+                <div class="message-header">
+                    <span class="message-type type-approved">Одобрено</span>
+                    <span class="message-date">{{ message.created_at|date:"d.m.Y H:i" }}</span>
+                </div>
+                <div class="message-content">
+                    {{ message.message|safe }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if rejected_books %}
+        <div class="message-section">
+            <h2>Отклоненные книги</h2>
+            {% for message in rejected_books %}
+            <div class="message-card">
+                <div class="message-header">
+                    <span class="message-type type-rejected">Отклонено</span>
+                    <span class="message-date">{{ message.created_at|date:"d.m.Y H:i" }}</span>
+                </div>
+                <div class="message-content">
+                    {{ message.message|safe }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if general_messages %}
+        <div class="message-section">
+            <h2>Общие сообщения</h2>
+            {% for message in general_messages %}
+            <div class="message-card">
+                <div class="message-header">
+                    <span class="message-type type-general">Сообщение</span>
+                    <span class="message-date">{{ message.created_at|date:"d.m.Y H:i" }}</span>
+                </div>
+                <div class="message-content">
+                    {{ message.message|safe }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="no-messages">
+            <h3>У вас пока нет сообщений от модератора</h3>
+            <p>Здесь будут появляться уведомления о статусе ваших книг и другие сообщения от модераторов.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %} 

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Добавить цитату{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="mb-0">Добавить цитату</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'books:add_quote_from_quotes_page' %}">
+                        {% csrf_token %}
+                        
+                        <div class="form-group mb-3">
+                            <label for="book">Книга:</label>
+                            <select name="book" id="book" class="form-control" required>
+                                <option value="">Выберите книгу</option>
+                                {% for book in user_books %}
+                                    <option value="{{ book.id }}">{{ book.title }} ({{ book.authors.all|join:", " }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="text">Текст цитаты:</label>
+                            <textarea name="text" id="text" class="form-control" rows="4" required></textarea>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="page">Страница:</label>
+                            <input type="number" name="page" id="page" class="form-control" min="1">
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="is_public" id="is_public" class="form-check-input" checked>
+                            <label class="form-check-label" for="is_public">Публичная цитата</label>
+                        </div>
+
+                        <div class="text-end">
+                            <a href="{% url 'books:user_quotes' %}" class="btn btn-secondary me-2">Отмена</a>
+                            <button type="submit" class="btn btn-primary">Добавить цитату</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .card-header {
+        background-color: #1a472a;
+        color: white;
+    }
+    
+    .form-control:focus {
+        border-color: #1a472a;
+        box-shadow: 0 0 0 0.2rem rgba(26, 71, 42, 0.25);
+    }
+    
+    .btn-primary {
+        background-color: #1a472a;
+        border-color: #1a472a;
+    }
+    
+    .btn-primary:hover {
+        background-color: #143521;
+        border-color: #143521;
+    }
+</style>
+{% endblock %} 

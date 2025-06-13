@@ -21,12 +21,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-your-secret-key'
+SECRET_KEY = 'your-secret-key-here'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -66,10 +66,7 @@ ROOT_URLCONF = 'main_admin.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            os.path.join(BASE_DIR, 'main_admin', 'templates'),
-            os.path.join(BASE_DIR, 'books', 'templates'),
-        ],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -77,6 +74,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'main_admin.context_processors.site_settings',
             ],
         },
     },
@@ -102,15 +100,9 @@ DATABASES = {
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-        'OPTIONS': {
-            'user_attributes': ('username', 'email'),
-        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {
-            'min_length': 8,
-        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -175,8 +167,8 @@ LOGOUT_REDIRECT_URL = 'home'
 
 # Настройки сессий и безопасности
 SESSION_COOKIE_AGE = 1209600  # 2 недели в секундах
-SESSION_COOKIE_SECURE = True  # Использовать только HTTPS
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False  # Отключаем для разработки
+CSRF_COOKIE_SECURE = False  # Отключаем для разработки
 
 # Admin site settings
 ADMIN_SITE_HEADER = "Библиотека - Административная панель"

@@ -36,53 +36,63 @@ class LibraryAdminSite(admin.AdminSite):
             'user_count': User.objects.count(),
             'author_count': Author.objects.count(),
             'review_count': Review.objects.count(),
-            'waiting_books': Book.objects.filter(needs_moderation=True).count(),
+            'waiting_books': Book.objects.filter(is_approved=False).count(),
             'today': today,
         })
         
         return super().index(request, extra_context)
 
 # Создаем экземпляр кастомного AdminSite
-admin_site = LibraryAdminSite(name='library_admin')
+admin_site = LibraryAdminSite(name='admin')
 
 # Регистрируем модели в админке
+User = get_user_model()
+
+@admin.register(Book, site=admin_site)
 class BookAdmin(admin.ModelAdmin):
-    list_display = ('title', 'display_authors', 'genre', 'is_approved', 'needs_moderation', 'submitted_by', 'submission_date')
-    list_filter = ('genre', 'is_approved', 'needs_moderation')
-    search_fields = ('title', 'authors__name', 'genre')
-    actions = ['approve_books', 'reject_books']
-    readonly_fields = ('submitted_by', 'submission_date')
+    list_display = ['title', 'get_authors', 'genre', 'pages', 'is_approved', 'submitted_by']
+    list_filter = ['is_approved', 'genre']
+    search_fields = ['title', 'authors__name', 'submitted_by__username', 'isbn']
+    readonly_fields = ['created_at', 'updated_at', 'submitted_by']
+    
+    fieldsets = (
+        ('Основная информация', {
+            'fields': (
+                'title',
+                'authors',
+                'pages',
+                'genre',
+                'description',
+                'cover',
+                'published_date',
+                'isbn'
+            ),
+            'description': 'Основные характеристики книги'
+        }),
+        ('Онлайн-источники', {
+            'fields': ('online_sources',),
+            'description': 'Ссылки на сайты, где можно прочитать книгу онлайн'
+        }),
+        ('Статус модерации', {
+            'fields': ('is_approved', 'moderation_comment'),
+            'classes': ('collapse',),
+            'description': 'Комментарии пользователя и статус модерации'
+        }),
+        ('Дополнительно', {
+            'fields': (
+                'world_rating',
+                'submitted_by',
+                'created_at',
+                'updated_at'
+            ),
+            'classes': ('collapse',),
+            'description': 'Дополнительная информация о книге'
+        }),
+    )
 
-    def display_authors(self, obj):
-        return ", ".join(author.name for author in obj.authors.all())
-    display_authors.short_description = 'Авторы'
-
-    def submission_date(self, obj):
-        return obj.created_at
-    submission_date.short_description = 'Дата добавления'
-
-    def approve_books(self, request, queryset):
-        updated = queryset.update(is_approved=True, needs_moderation=True)
-        self.message_user(request, f'{updated} книг успешно одобрено и добавлено в каталог.')
-    approve_books.short_description = 'Одобрить и добавить в каталог'
-
-    def reject_books(self, request, queryset):
-        updated = queryset.update(is_approved=False)
-        self.message_user(request, f'{updated} книг отправлено на рассмотрение модератором.', messages.WARNING)
-    reject_books.short_description = 'Отправить на рассмотрение'
-
-    def changelist_view(self, request, extra_context=None):
-        if not extra_context:
-            extra_context = {}
-        
-        extra_context.update({
-            'total_books': Book.objects.count(),
-            'waiting_books': Book.objects.filter(is_approved=False, needs_moderation=True).count(),  # Книги на рассмотрении
-            'approved_books': Book.objects.filter(is_approved=True, needs_moderation=True).count(),  # Одобренные книги
-            'rejected_books': Book.objects.filter(is_approved=False, needs_moderation=False).count(),  # Отклоненные книги
-        })
-        
-        return super().changelist_view(request, extra_context=extra_context)
+    def get_authors(self, obj):
+        return ", ".join([author.name for author in obj.authors.all()])
+    get_authors.short_description = 'Авторы'
 
 class AuthorAdmin(admin.ModelAdmin):
     list_display = ('name', 'century', 'country')
@@ -108,14 +118,10 @@ class GlobalCollectionAdmin(admin.ModelAdmin):
     list_filter = ('is_active',)
     search_fields = ('title',)
 
-# Регистрируем все модели
-admin_site.register(Book, BookAdmin)
+# Регистрируем остальные модели
 admin_site.register(Author, AuthorAdmin)
 admin_site.register(Review, ReviewAdmin)
 admin_site.register(UserBookRelation, UserBookRelationAdmin)
 admin_site.register(Quote, QuoteAdmin)
 admin_site.register(GlobalCollection, GlobalCollectionAdmin)
-
-# Регистрируем пользователей
-User = get_user_model()
 admin_site.register(User, UserAdmin) 

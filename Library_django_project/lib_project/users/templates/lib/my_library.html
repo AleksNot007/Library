@@ -24,6 +24,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" href="{% url 'books:user_collections' %}">
+                    Мои подборки
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="{% url 'books:user_blacklist' %}">
                     Черный список
                 </a>
@@ -41,9 +46,29 @@
                     {% for book in reading_now %}
                         <div class="book-card">
                             <a href="{% url 'books:detail' book.book.id %}" class="book-link">
-                                <div class="book-cover-placeholder"></div>
+                                {% if book.book.cover %}
+                                    <img src="{{ book.book.cover.url }}" alt="{{ book.book.title }}" class="book-cover">
+                                {% else %}
+                                    <div class="book-cover-placeholder"></div>
+                                {% endif %}
                                 <h4>{{ book.book.title }}</h4>
                                 <p class="authors">{{ book.book.authors.all|join:", " }}</p>
+                                {% if book.book.pages %}
+                                    <div class="reading-progress">
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                style="width: {{ book.progress }}%"
+                                                aria-valuenow="{{ book.progress }}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="100">
+                                                {{ book.progress }}%
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">
+                                            {{ book.progress_pages|default:0 }} из {{ book.book.pages }} стр.
+                                        </small>
+                                    </div>
+                                {% endif %}
                             </a>
                         </div>
                     {% empty %}
@@ -99,6 +124,23 @@
                         </div>
                     {% empty %}
                         <p>В избранном пока пусто</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="collection-card">
+                <h3>Стоп-лист</h3>
+                <div class="books-grid">
+                    {% for book in stopped %}
+                        <div class="book-card">
+                            <a href="{% url 'books:detail' book.book.id %}" class="book-link">
+                                <div class="book-cover-placeholder"></div>
+                                <h4>{{ book.book.title }}</h4>
+                                <p class="authors">{{ book.book.authors.all|join:", " }}</p>
+                            </a>
+                        </div>
+                    {% empty %}
+                        <p>Нет отложенных книг</p>
                     {% endfor %}
                 </div>
             </div>
@@ -162,6 +204,21 @@
         border-radius: 5px;
         padding: 10px;
         text-align: center;
+        background-color: #fff;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .book-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .book-cover {
+        width: 120px;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 3px;
+        margin: 0 auto 10px;
     }
 
     .book-cover-placeholder {
@@ -170,6 +227,9 @@
         background-color: #f0f0f0;
         margin: 0 auto 10px;
         border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .book-card h4 {
@@ -182,11 +242,22 @@
         font-size: 0.9em;
         color: #666;
         font-style: italic;
+        margin-bottom: 10px;
     }
 
-    h2 {
-        color: #1a472a;
-        margin-bottom: 20px;
+    .reading-progress {
+        padding: 0 10px;
+    }
+
+    .progress {
+        height: 10px;
+        border-radius: 5px;
+        background-color: #e9ecef;
+    }
+
+    .progress-bar {
+        border-radius: 5px;
+        transition: width 0.3s ease;
     }
 
     .book-link {
@@ -200,13 +271,9 @@
         color: inherit;
     }
 
-    .book-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .book-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    h2 {
+        color: #1a472a;
+        margin-bottom: 20px;
     }
 </style>
 {% endblock %}

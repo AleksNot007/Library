@@ -18,21 +18,22 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from users import views as user_views
-from books import views as book_views
-from books.admin import admin_site
+from .admin import admin_site
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic.base import RedirectView
 from . import views
 
 urlpatterns = [
-    path('admin/', admin_site.urls),  # Используем кастомный admin_site
-    path('', views.home, name='home'),  # Главная страница
-    path('books/', include('books.urls')),  # Добавляем префикс 'books/' для URL-ов приложения books
-    path('users/', include('users.urls')),  # URL-ы приложения users
-    path('recommendations/', include('recommendations.urls')),
-]
+    path('', views.home, name='home'),
+    path('admin/', admin_site.urls),
+    path('books/', include(('books.urls', 'books'), namespace='books')),
+    path('users/', include(('users.urls', 'users'), namespace='users')),
+    path('recommendations/', include(('recommendations.urls', 'recommendations'), namespace='recommendations')),
+    # Редиректы для обратной совместимости
+    path('catalog/', RedirectView.as_view(url='/books/catalog/', permanent=True)),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 

@@ -3,8 +3,6 @@
 {% block extra_js %}
 {{ block.super }}
 <script>
-alert('JavaScript загружен!');
-
 // Добавляем глобальный обработчик ошибок
 window.onerror = function(msg, url, lineNo, columnNo, error) {
     console.error('Ошибка: ', msg);

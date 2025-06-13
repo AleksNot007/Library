@@ -1,0 +1,26 @@
+{% for book in books %}
+<div class="book-card">
+    <a href="{% url 'books:detail' book.id %}" class="book-cover-link">
+        {% if book.cover %}
+        <img src="{{ book.cover.url }}" alt="{{ book.title }}" class="book-cover">
+        {% else %}
+        <div class="book-cover no-cover">
+            <i class="fas fa-book"></i>
+        </div>
+        {% endif %}
+    </a>
+    <div class="book-info text-center">
+        <h5 class="book-title">
+            <a href="{% url 'books:detail' book.id %}">{{ book.title }}</a>
+        </h5>
+        <div class="book-authors">
+            {% for author in book.authors.all %}
+            <a href="#" class="author-link">{{ author.name }}</a>{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+        <div class="book-progress">
+            <span class="text-muted">0 из 1 стр.</span>
+        </div>
+    </div>
+</div>
+{% endfor %} 

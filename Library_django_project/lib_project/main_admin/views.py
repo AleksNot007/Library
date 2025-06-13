@@ -53,9 +53,8 @@ def site_statistics(request):
     # Статистика по книгам
     book_stats = {
         'total': Book.objects.count(),
-        'approved': Book.objects.filter(is_approved=True, needs_moderation=True).count(),  # Книги, одобренные модератором
-        'waiting': Book.objects.filter(is_approved=False, needs_moderation=True).count(),  # Книги на рассмотрении
-        'rejected': Book.objects.filter(is_approved=False, needs_moderation=False).count(),  # Отклоненные книги
+        'approved': Book.objects.filter(is_approved=True).count(),  # Одобренные книги
+        'waiting': Book.objects.filter(is_approved=False).count(),  # Книги на рассмотрении
     }
     
     # Статистика по пользователям

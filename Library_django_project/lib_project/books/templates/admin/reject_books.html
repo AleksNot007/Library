@@ -1,0 +1,86 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="content">
+    <h1>{{ title }}</h1>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="module">
+            <h2>Выбранные книги:</h2>
+            <ul>
+                {% for book in books %}
+                <li>{{ book.title }} (Автор: {{ book.authors.all|join:", " }})</li>
+                {% endfor %}
+            </ul>
+            
+            <div class="form-row">
+                <label for="rejection_reason">Причина отклонения:</label>
+                <textarea name="rejection_reason" id="rejection_reason" rows="4" cols="40" required></textarea>
+            </div>
+            
+            {% for book in books %}
+            <input type="hidden" name="_selected_action" value="{{ book.pk }}">
+            {% endfor %}
+            
+            <div class="submit-row">
+                <input type="submit" value="Отклонить книги" class="default">
+                <a href="../" class="button cancel-link">Отмена</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    .module {
+        margin: 20px 0;
+        padding: 20px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .form-row {
+        margin: 20px 0;
+    }
+    
+    .form-row label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    
+    .form-row textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .submit-row {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+    }
+    
+    .button {
+        padding: 10px 15px;
+        margin-right: 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .default {
+        background: #417690;
+        color: #fff;
+    }
+    
+    .cancel-link {
+        background: #ba2121;
+        color: #fff;
+    }
+</style>
+{% endblock %} 

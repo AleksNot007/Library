@@ -82,7 +82,7 @@
             <div class="stat-title">Книги на рассмотрении</div>
             <div class="stat-value">{{ waiting_books }}</div>
             {% if waiting_books > 0 %}
-            <a href="{% url 'admin:books_book_changelist' %}?needs_moderation__exact=1" class="stat-link">
+            <a href="{% url 'admin:books_book_changelist' %}?is_approved__exact=0" class="stat-link">
                 Просмотреть ожидающие →
             </a>
             {% endif %}
@@ -92,11 +92,11 @@
             <div class="stat-title">Пользователей</div>
             <div class="stat-value">{{ user_count }}</div>
             <a href="{% url 'admin:users_user_changelist' %}" class="stat-link">
-                Управление пользователями →
+                Просмотреть пользователей →
             </a>
         </div>
 
-        <div class="stat-card danger">
+        <div class="stat-card info">
             <div class="stat-title">Отзывов</div>
             <div class="stat-value">{{ review_count }}</div>
             <a href="{% url 'admin:books_review_changelist' %}" class="stat-link">
@@ -106,42 +106,40 @@
     </div>
 
     {% if app_list %}
+    <div class="app-list">
         {% for app in app_list %}
-            <div class="app-{{ app.app_label }} module{% if app.app_url in request.path %} current{% endif %}">
-                <table>
-                    <caption>
-                        <a href="{{ app.app_url }}" class="section" title="{% blocktranslate with name=app.name %}Models in the {{ name }} application{% endblocktranslate %}">{{ app.name }}</a>
-                    </caption>
-                    {% for model in app.models %}
-                        <tr class="model-{{ model.object_name|lower }}{% if model.admin_url in request.path %} current{% endif %}">
-                            {% if model.admin_url %}
-                                <th scope="row"><a href="{{ model.admin_url }}"{% if model.admin_url in request.path %} aria-current="page"{% endif %}>{{ model.name }}</a></th>
-                            {% else %}
-                                <th scope="row">{{ model.name }}</th>
-                            {% endif %}
+        <div class="app-{{ app.app_label }} module{% if app.app_url in request.path %} current-app{% endif %}">
+            <table>
+                <caption>
+                    <a href="{{ app.app_url }}" class="section" title="{% blocktranslate with name=app.name %}Models in the {{ name }} application{% endblocktranslate %}">{{ app.name }}</a>
+                </caption>
+                {% for model in app.models %}
+                <tr class="model-{{ model.object_name|lower }}{% if model.admin_url in request.path %} current-model{% endif %}">
+                    {% if model.admin_url %}
+                    <th scope="row"><a href="{{ model.admin_url }}"{% if model.admin_url in request.path %} aria-current="page"{% endif %}>{{ model.name }}</a></th>
+                    {% else %}
+                    <th scope="row">{{ model.name }}</th>
+                    {% endif %}
 
-                            {% if model.add_url %}
-                                <td><a href="{{ model.add_url }}" class="addlink">{% translate "Add" %}</a></td>
-                            {% else %}
-                                <td></td>
-                            {% endif %}
+                    {% if model.add_url %}
+                    <td><a href="{{ model.add_url }}" class="addlink">{% translate "Add" %}</a></td>
+                    {% else %}
+                    <td></td>
+                    {% endif %}
 
-                            {% if model.admin_url and show_changelinks %}
-                                {% if model.view_only %}
-                                    <td><a href="{{ model.admin_url }}" class="viewlink">{% translate "View" %}</a></td>
-                                {% else %}
-                                    <td><a href="{{ model.admin_url }}" class="changelink">{% translate "Change" %}</a></td>
-                                {% endif %}
-                            {% elif show_changelinks %}
-                                <td></td>
-                            {% endif %}
-                        </tr>
-                    {% endfor %}
-                </table>
-            </div>
+                    {% if model.admin_url and show_changelinks %}
+                    <td><a href="{{ model.admin_url }}" class="changelink">{% translate "Change" %}</a></td>
+                    {% else %}
+                    <td></td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
         {% endfor %}
+    </div>
     {% else %}
-        <p>{% translate "You don't have permission to view or edit anything." %}</p>
+    <p>{% translate "You don't have permission to view or edit anything." %}</p>
     {% endif %}
 </div>
 {% endblock %}
@@ -154,25 +152,25 @@
         {% load log %}
         {% get_admin_log 10 as admin_log for_user user %}
         {% if not admin_log %}
-            <p>{% translate "None available" %}</p>
+        <p>{% translate "None available" %}</p>
         {% else %}
-            <ul class="actionlist">
-                {% for entry in admin_log %}
-                    <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
-                        {% if entry.is_deletion or not entry.get_admin_url %}
-                            {{ entry.object_repr }}
-                        {% else %}
-                            <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
-                        {% endif %}
-                        <br>
-                        {% if entry.content_type %}
-                            <span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>
-                        {% else %}
-                            <span class="mini quiet">{% translate "Unknown content" %}</span>
-                        {% endif %}
-                    </li>
-                {% endfor %}
-            </ul>
+        <ul class="actionlist">
+            {% for entry in admin_log %}
+            <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+                {% if entry.is_deletion or not entry.get_admin_url %}
+                {{ entry.object_repr }}
+                {% else %}
+                <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                {% endif %}
+                <br>
+                {% if entry.content_type %}
+                <span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>
+                {% else %}
+                <span class="mini quiet">{% translate "Unknown content" %}</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
         {% endif %}
     </div>
 </div>

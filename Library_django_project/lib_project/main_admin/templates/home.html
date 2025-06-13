@@ -29,15 +29,23 @@
     </section>
 
     <!-- Категории -->
-    <h2 class="section-title">КАТЕГОРИИ</h2>
-    <div class="categories">
-        {% for genre_code, genre_name in GENRE_CHOICES %}
-        <a href="{% url 'books:catalog' %}?genre={{ genre_code }}" class="category-card">
-            <h3>{{ genre_name }}</h3>
-            <p>Узнать больше</p>
-        </a>
-        {% endfor %}
-    </div>
+    <section class="categories-section">
+        <h2 class="section-title">КАТЕГОРИИ</h2>
+        <div class="categories-slider">
+            {% for genre_code, genre_name in GENRE_CHOICES %}
+            <div class="category-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h3>{{ genre_name }}</h3>
+                        <a href="{% url 'books:catalog' %}?genre={{ genre_code }}" class="category-link">
+                            Узнать больше
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
 
     <!-- Популярное -->
     <h2 class="section-title">ПОПУЛЯРНОЕ</h2>
@@ -104,4 +112,108 @@
         <a href="{% url 'users:login' %}" class="cta-button">Войти</a>
     {% endif %}
 </main>
+
+<style>
+.categories-section {
+    padding: 2rem 0;
+}
+
+.section-title {
+    color: #1a472a;
+    text-align: center;
+    margin-bottom: 2rem;
+    font-weight: bold;
+}
+
+.categories-slider {
+    display: flex;
+    overflow-x: auto;
+    gap: 1rem;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: #1a472a #f0f0f0;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+}
+
+.categories-slider::-webkit-scrollbar {
+    height: 8px;
+}
+
+.categories-slider::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 4px;
+}
+
+.categories-slider::-webkit-scrollbar-thumb {
+    background-color: #1a472a;
+    border-radius: 4px;
+}
+
+.category-card {
+    flex: 0 0 auto;
+    width: 250px;
+    scroll-snap-align: start;
+}
+
+.category-card .card {
+    height: 120px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.category-card .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.category-card .card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.5rem;
+}
+
+.category-card h3 {
+    color: #333;
+    font-size: 1.2rem;
+    margin: 0;
+    margin-bottom: 1rem;
+}
+
+.category-link {
+    color: #666;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: #f5f5f5;
+    border-radius: 5px;
+}
+
+.category-link:hover {
+    color: #333;
+    background: #e0e0e0;
+    text-decoration: none;
+}
+
+@media (max-width: 768px) {
+    .category-card {
+        width: 200px;
+    }
+    
+    .category-card .card {
+        height: 100px;
+    }
+    
+    .category-card h3 {
+        font-size: 1rem;
+    }
+}
+</style>
 {% endblock %}

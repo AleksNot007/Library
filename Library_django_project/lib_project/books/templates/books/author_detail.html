@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ author.name }} — Информация об авторе{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Информация об авторе -->
+        <div class="col-md-4">
+            {% if author.photo %}
+                <img src="{{ author.photo.url }}" class="img-fluid rounded" alt="{{ author.name }}">
+            {% else %}
+                <div class="author-photo-placeholder">
+                    <i class="fas fa-user fa-4x text-secondary"></i>
+                </div>
+            {% endif %}
+
+            <div class="author-info mt-4">
+                {% if author.birth_date or author.death_date %}
+                <div class="dates mb-3">
+                    {% if author.birth_date %}
+                        <p><strong>Дата рождения:</strong> {{ author.birth_date|date:"d.m.Y" }}</p>
+                    {% endif %}
+                    {% if author.death_date %}
+                        <p><strong>Дата смерти:</strong> {{ author.death_date|date:"d.m.Y" }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if author.country %}
+                <p><strong>Страна:</strong> {{ author.country }}</p>
+                {% endif %}
+
+                {% if author.century %}
+                <p><strong>Век:</strong> {{ author.century }}</p>
+                {% endif %}
+
+                {% if author.wiki_url %}
+                <a href="{{ author.wiki_url }}" target="_blank" class="btn btn-outline-primary mt-3">
+                    <i class="fas fa-external-link-alt"></i> Читать в Википедии
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Биография и книги -->
+        <div class="col-md-8">
+            <h1>{{ author.name }}</h1>
+
+            {% if author.biography %}
+            <div class="biography mb-4">
+                <h3>Биография</h3>
+                {{ author.biography|linebreaks }}
+            </div>
+            {% endif %}
+
+            <!-- Книги автора -->
+            <div class="author-books">
+                <h3>Книги автора</h3>
+                {% if books %}
+                <div class="row">
+                    {% for book in books %}
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            {% if book.cover %}
+                                <img src="{{ book.cover.url }}" class="card-img-top" alt="{{ book.title }}">
+                            {% else %}
+                                <div class="book-cover-placeholder">
+                                    <i class="fas fa-book fa-3x text-secondary"></i>
+                                </div>
+                            {% endif %}
+                            <div class="card-body">
+                                <h5 class="card-title">{{ book.title }}</h5>
+                                {% if book.published_date %}
+                                <p class="card-text"><small class="text-muted">{{ book.published_date|date:"Y" }}</small></p>
+                                {% endif %}
+                                <div class="ratings">
+                                    {% if book.world_rating %}
+                                    <div class="world-rating">
+                                        <i class="fas fa-globe"></i> {{ book.world_rating|floatformat:1 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="site-rating">
+                                        <i class="fas fa-star"></i> {{ book.site_rating|floatformat:1 }}
+                                        <small>({{ book.reviews.count }})</small>
+                                    </div>
+                                </div>
+                                <a href="{% url 'books:detail' book.id %}" class="btn btn-primary mt-2">Подробнее</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Пагинация -->
+                {% if books.paginator.num_pages > 1 %}
+                <nav aria-label="Навигация по страницам" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if books.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ books.previous_page_number }}">Предыдущая</a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in books.paginator.page_range %}
+                            {% if books.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > books.number|add:'-3' and num < books.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if books.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ books.next_page_number }}">Следующая</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                {% else %}
+                <p class="text-muted">У этого автора пока нет книг в библиотеке.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.author-photo-placeholder {
+    width: 100%;
+    height: 400px;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+}
+
+.book-cover-placeholder {
+    height: 200px;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-img-top {
+    height: 200px;
+    object-fit: cover;
+}
+
+.ratings {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.world-rating, .site-rating {
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.world-rating i {
+    color: #28a745;
+}
+
+.site-rating i {
+    color: #ffc107;
+}
+</style>
+{% endblock %} 

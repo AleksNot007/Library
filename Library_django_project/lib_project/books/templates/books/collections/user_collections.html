@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои подборки — Личная библиотека{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Мои подборки</h1>
+        <a href="{% url 'books:create_collection' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Создать подборку
+        </a>
+    </div>
+
+    {% if user_collections %}
+        <div class="row">
+            {% for collection in user_collections %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        {% if collection.cover %}
+                            <img src="{{ collection.cover.url }}" class="card-img-top" alt="{{ collection.title }}" style="height: 200px; object-fit: cover;">
+                        {% else %}
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <i class="fas fa-folder fa-3x text-muted"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a href="{% url 'books:collection_detail' collection.slug %}" class="text-decoration-none text-dark">
+                                    {{ collection.title }}
+                                </a>
+                            </h5>
+                            <p class="card-text text-muted">
+                                {{ collection.description|truncatechars:100|default:"Описание отсутствует" }}
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="collection-info">
+                                    <small class="text-muted">
+                                        <i class="fas fa-book"></i> {{ collection.books_count }} книг
+                                    </small>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas {% if collection.is_public %}fa-globe{% else %}fa-lock{% endif %}"></i>
+                                        {% if collection.is_public %}Публичная{% else %}Личная{% endif %}
+                                    </small>
+                                </div>
+                                <div class="btn-group">
+                                    <a href="{% url 'books:edit_collection' collection.slug %}" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'books:delete_collection' collection.slug %}" class="btn btn-sm btn-outline-danger" title="Удалить">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
+            <h3>У вас пока нет подборок</h3>
+            <p class="text-muted">Создайте свою первую подборку, чтобы начать организовывать книги</p>
+            <a href="{% url 'books:create_collection' %}" class="btn btn-primary mt-3">
+                <i class="fas fa-plus"></i> Создать подборку
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.btn-group .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.collection-info {
+    line-height: 1.2;
+}
+</style>
+{% endblock %} 

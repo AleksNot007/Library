@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Мои подборки{% endblock %}
+
+{% block content %}
+<div class="library-container">
+    <!-- Навигационные вкладки -->
+    <div class="nav-tabs-wrapper">
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'books:user_library' %}">
+                    Моя библиотека
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'books:user_reviews' %}">
+                    Мои отзывы
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'books:user_quotes' %}">
+                    Мои цитаты
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{% url 'books:user_collections' %}">
+                    Мои подборки
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'books:user_blacklist' %}">
+                    Черный список
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="collections-section mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Мои подборки</h2>
+            <a href="{% url 'books:create_collection' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Создать подборку
+            </a>
+        </div>
+
+        {% if user_collections %}
+            <div class="collections-grid">
+                {% for collection in user_collections %}
+                    <div class="collection-card">
+                        {% if collection.cover %}
+                            <img src="{{ collection.cover.url }}" alt="{{ collection.title }}" class="collection-cover">
+                        {% else %}
+                            <div class="collection-cover-placeholder">
+                                <i class="fas fa-book-open fa-3x"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="collection-info">
+                            <h3>{{ collection.title }}</h3>
+                            {% if collection.description %}
+                                <p class="collection-description">{{ collection.description|truncatechars:100 }}</p>
+                            {% endif %}
+                            
+                            <div class="collection-stats">
+                                <span><i class="fas fa-book"></i> {{ collection.books.count }} книг</span>
+                                {% if collection.is_public %}
+                                    <span class="public-badge"><i class="fas fa-globe"></i> Публичная</span>
+                                {% else %}
+                                    <span class="private-badge"><i class="fas fa-lock"></i> Личная</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="collection-actions">
+                            <a href="{% url 'books:edit_collection' collection.slug %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i> Редактировать
+                            </a>
+                            <a href="{% url 'books:delete_collection' collection.slug %}" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash"></i> Удалить
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-collections">
+                <i class="fas fa-book-open fa-3x mb-3"></i>
+                <p>У вас пока нет созданных подборок</p>
+                <a href="{% url 'books:create_collection' %}" class="btn btn-primary">
+                    Создать первую подборку
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .library-container {
+        padding: 20px;
+    }
+
+    .collections-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .collection-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+        background-color: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .collection-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .collection-cover {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+    }
+
+    .collection-cover-placeholder {
+        width: 100%;
+        height: 200px;
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #adb5bd;
+    }
+
+    .collection-info {
+        padding: 20px;
+    }
+
+    .collection-info h3 {
+        margin: 0 0 10px 0;
+        color: #1a472a;
+        font-size: 1.25rem;
+    }
+
+    .collection-description {
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+    }
+
+    .collection-stats {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .public-badge, .private-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+
+    .public-badge {
+        background-color: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .private-badge {
+        background-color: #fff3e0;
+        color: #f57c00;
+    }
+
+    .collection-actions {
+        padding: 15px 20px;
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 10px;
+    }
+
+    .no-collections {
+        text-align: center;
+        padding: 40px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        color: #666;
+    }
+
+    .btn-primary {
+        background-color: #1a472a;
+        border-color: #1a472a;
+    }
+
+    .btn-primary:hover {
+        background-color: #143521;
+        border-color: #143521;
+    }
+
+    .btn-outline-primary {
+        color: #1a472a;
+        border-color: #1a472a;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: #1a472a;
+        color: white;
+    }
+</style>
+{% endblock %} 
